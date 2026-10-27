@@ -127,6 +127,45 @@ This collection of {timeColumns} columns each of length {channelLength} will bec
     'embedding.positionEmbeddingTerm': '_position embedding matrix_',
     'embedding.timeTerm': '_time_',
     'embedding.channelTerm': '_channel_',
+    'layerNorm.introduction': `
+
+The  {inputEmbedding} matrix from the previous section is the input to our first Transformer block.
+
+The first step in the Transformer block is to apply _layer normalization_ to this matrix. This is an
+operation that normalizes the values in each column of the matrix separately.`,
+
+    'layerNorm.stability': `
+Normalization is an important step in the training of deep neural networks, and it helps improve the
+stability of the model during training.
+
+We can regard each column separately, so let's focus on the 4th column ({columnIndex}) for now.`,
+
+    'layerNorm.normalization': `
+The goal is to make the average value in the column equal to 0 and the standard deviation equal to 1. To do this,
+we find both of these quantities ({mean} & {standardDeviation}) for the column and then subtract the average and divide by the standard deviation.`,
+
+    'layerNorm.affine': `
+The notation we use here is E[x] for the average and Var[x] for the variance (of the column of length {channels}). The
+variance is simply the standard deviation squared. The epsilon term (ε = {epsilon}) is there to prevent division by zero.
+
+We compute and store these values in our aggregation layer since we're applying them to all values in the column.
+
+Finally, once we have the normalized values, we multiply each element in the column by a learned
+{weight} and then add a {bias} value, resulting in our {normalized}.`,
+
+    'layerNorm.sequence': `
+We run this normalization operation on each column of the {inputEmbedding}, and the result is
+the {normalizedEmbedding}, which is ready to be passed into the Self-Attention layer.
+`,
+
+    'layerNorm.inputEmbeddingTerm': '_input embedding_',
+    'layerNorm.meanTerm': 'mean (μ)',
+    'layerNorm.standardDeviationTerm': 'std dev (σ)',
+    'layerNorm.weightTerm': 'weight (γ)',
+    'layerNorm.biasTerm': 'bias (β)',
+    'layerNorm.normalizedValuesTerm': 'normalized values',
+    'layerNorm.inputEmbeddingMatrixTerm': 'input embedding matrix',
+    'layerNorm.normalizedEmbeddingTerm': 'normalized input embedding',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -239,6 +278,30 @@ export const zhCN: Record<MessageKey, string> = {
     'embedding.positionEmbeddingTerm': '_位置嵌入矩阵_',
     'embedding.timeTerm': '_时间（time）_',
     'embedding.channelTerm': '_通道（channel）_',
+    'layerNorm.introduction': `上一章得到的{inputEmbedding}矩阵，将作为第一个 Transformer 块的输入。
+
+Transformer 块的第一步，是对这个矩阵进行_层归一化（layer normalization）_：分别对矩阵的每一列进行归一化处理。`,
+
+    'layerNorm.stability': `归一化是训练深度神经网络时的重要步骤，有助于提高模型训练的稳定性。
+
+由于每一列都可以单独处理，我们先关注第 4 列（{columnIndex}）。`,
+
+    'layerNorm.normalization': '这一步的目标，是让这一列的均值变为 0、标准差变为 1。为此，先计算该列的{mean}和{standardDeviation}，再让每个元素减去均值，并除以标准差。',
+    'layerNorm.affine': `对于长度为 {channels} 的列向量，我们用 E[x] 表示均值，用 Var[x] 表示_方差（variance）_。方差就是标准差的平方。为了避免除以零，计算时会加入一个很小的 ε（epsilon）项（ε = {epsilon}）。
+
+这些统计量会用于该列的每个元素，因此我们在聚合层中计算并存储它们。
+
+最后，对归一化后的列向量逐元素处理：先乘以对应的{weight}，再加上对应的{bias}，得到{normalized}。权重和偏置都是训练中学到的参数。`,
+
+    'layerNorm.sequence': '对{inputEmbedding}的每一列都进行上述归一化操作，就得到{normalizedEmbedding}。接下来，它将传入_自注意力（Self-Attention）_层。',
+    'layerNorm.inputEmbeddingTerm': '_输入嵌入_',
+    'layerNorm.meanTerm': '均值（mean，μ）',
+    'layerNorm.standardDeviationTerm': '标准差（standard deviation，σ）',
+    'layerNorm.weightTerm': '权重（weight，γ）',
+    'layerNorm.biasTerm': '偏置（bias，β）',
+    'layerNorm.normalizedValuesTerm': '归一化后的数值',
+    'layerNorm.inputEmbeddingMatrixTerm': '输入嵌入矩阵',
+    'layerNorm.normalizedEmbeddingTerm': '归一化后的输入嵌入',
 };
 
 export const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, 'zh-CN': zhCN };

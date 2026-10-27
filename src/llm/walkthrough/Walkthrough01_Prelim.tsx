@@ -1,6 +1,6 @@
 import React from 'react';
 import { Phase } from "./Walkthrough";
-import { commentary, embed, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
+import { localizedCommentary, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
 import s from './Walkthrough.module.scss';
 import { Vec3 } from '@/src/utils/vector';
 
@@ -18,23 +18,12 @@ export function walkthrough01_Prelim(args: IWalkthroughArgs) {
 
     setInitialCamera(state, new Vec3(184.744, 0.000, -636.820), new Vec3(296.000, 16.000, 13.500));
 
-    let c0 = commentary(wt, null, 0)`
-Before we delve into the algorithm's intricacies, let's take a brief step back.
-
-This guide focuses on _inference_, not training, and as such is only a small part of the entire machine-learning process.
-In our case, the model's weights have been pre-trained, and we use the inference process to generate output. This runs directly in your browser.
-
-The model showcased here is part of the GPT (generative pre-trained transformer) family, which can be described as a "context-based token predictor".
-OpenAI introduced this family in 2018, with notable members such as GPT-2, GPT-3, and GPT-3.5 Turbo, the latter being the foundation of the widely-used ChatGPT.
-It might also be related to GPT-4, but specific details remain unknown.
-
-This guide was inspired by the ${embedLink('minGPT', minGptLink)} GitHub project, a minimal GPT implementation in ${embedLink('PyTorch', pytorchLink)}
-created by ${embedLink('Andrej Karpathy', andrejLink)}.
-His YouTube series ${embedLink("Neural Networks: Zero to Hero", zeroToHeroLink)} and the minGPT project have been invaluable resources in the creation of this
-guide. The toy model featured here is based on one found within the minGPT project.
-
-Alright, let's get started!
-`;
+    localizedCommentary(wt, 'prelim.body', {
+        minGpt: embedLink('minGPT', minGptLink),
+        pytorch: embedLink('PyTorch', pytorchLink),
+        andrej: embedLink('Andrej Karpathy', andrejLink),
+        zeroToHero: embedLink('Neural Networks: Zero to Hero', zeroToHeroLink),
+    }, null, 0);
 
 }
 

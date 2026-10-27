@@ -6,7 +6,7 @@ import { Vec3, Vec4 } from "@/src/utils/vector";
 import { IWalkthrough, Phase, PhaseGroup } from "./Walkthrough";
 import { IProgramState } from "../Program";
 import { ICameraPos } from "../Camera";
-import { interpolate, translate, type MessageKey } from '../i18n/messages';
+import { interpolate, translate, type MessageArguments, type MessageKey } from '../i18n/messages';
 import type { Locale } from '../i18n/locale';
 
 export interface IWalkthroughArgs {
@@ -142,6 +142,11 @@ export function commentary(wt: IWalkthrough, prev?: ITimeInfo | null, duration?:
     }
 }
 
+export function localizedCommentary<Key extends MessageKey>(
+    wt: IWalkthrough,
+    key: Key,
+    ...args: [...MessageArguments<Key>, prev?: ITimeInfo | null, duration?: number]
+): ICommentary;
 export function localizedCommentary(wt: IWalkthrough, key: MessageKey, slots: Record<string, unknown> = {}, prev?: ITimeInfo | null, duration?: number) {
     const { strings, values } = interpolate(translate(wt.locale, key), slots);
     const result = commentary(wt, prev, duration)(strings, ...values);

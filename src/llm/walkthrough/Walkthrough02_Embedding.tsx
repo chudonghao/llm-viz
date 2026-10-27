@@ -6,8 +6,9 @@ import { lerp } from "@/src/utils/math";
 import { Mat4f } from "@/src/utils/matrix";
 import { Dim, Vec3, Vec4 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
-import { commentary, DimStyle, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
+import { localizedCommentary, DimStyle, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
 import { processUpTo, startProcessBefore } from "./Walkthrough00_Intro";
+import { translate, type MessageKey } from '../i18n/messages';
 
 export function walkthrough02_Embedding(args: IWalkthroughArgs) {
     let { walkthrough: wt, state, tools: { c_str, c_blockRef, c_dimRef, afterTime, cleanup, breakAfter }, layout } = args;
@@ -17,15 +18,15 @@ export function walkthrough02_Embedding(args: IWalkthroughArgs) {
         return;
     }
 
+    const t = (key: MessageKey) => translate(wt.locale, key);
+
     setInitialCamera(state, new Vec3(15.654, 0.000, -80.905), new Vec3(287.000, 14.500, 3.199));
     wt.dimHighlightBlocks = [layout.idxObj, layout.tokEmbedObj, layout.posEmbedObj, layout.residual0];
 
-    commentary(wt)`
-We saw previously how the tokens are mapped to a sequence of integers using a simple lookup table.
-These integers, the ${c_blockRef('_token indices_', state.layout.idxObj, DimStyle.TokenIdx)}, are the first and only time we see integers in the model.
-From here on out, we're using floats (decimal numbers).
-
-Let's take a look at how the 4th token (index 3) is used to generate the 4th column vector of our ${c_blockRef('_input embedding_', state.layout.residual0)}.`;
+    localizedCommentary(wt, 'embedding.introduction', {
+        tokenIndices: c_blockRef(t('embedding.tokenIndicesTerm'), state.layout.idxObj, DimStyle.TokenIdx),
+        inputEmbedding: c_blockRef(t('embedding.inputEmbeddingTerm'), state.layout.residual0),
+    });
     breakAfter();
 
     let t_moveCamera = afterTime(null, 1.0);
@@ -33,12 +34,12 @@ Let's take a look at how the 4th token (index 3) is used to generate the 4th col
 
     breakAfter();
 
-    commentary(wt)`
-We use the token index (in this case ${c_str('B', DimStyle.Token)} = ${c_dimRef('1', DimStyle.TokenIdx)}) to select the 2nd column of the ${c_blockRef('_token embedding matrix_', state.layout.tokEmbedObj)} on the left.
-Note we're using 0-based indexing here, so the first column is at index 0.
-
-This produces a column vector of size ${c_dimRef('_C_ = 48', DimStyle.C)}, which we describe as the token embedding.
-    `;
+    localizedCommentary(wt, 'embedding.tokenEmbedding', {
+        token: c_str('B', 0, DimStyle.Token),
+        tokenIndex: c_dimRef('1', DimStyle.TokenIdx),
+        tokenEmbedding: c_blockRef(t('embedding.tokenEmbeddingTerm'), state.layout.tokEmbedObj),
+        channels: c_dimRef('_C_ = 48', DimStyle.C),
+    });
     breakAfter();
 
     let t1_fadeEmbedAnim = afterTime(null, 0.3);
@@ -46,22 +47,21 @@ This produces a column vector of size ${c_dimRef('_C_ = 48', DimStyle.C)}, which
 
     breakAfter();
 
-    commentary(wt)`
-And since we're looking at our token ${c_str('B', DimStyle.Token)} in the 4th _position_ (t = ${c_dimRef('3', DimStyle.T)}), we'll take the 4th column of the ${c_blockRef('_position embedding matrix_', state.layout.posEmbedObj)}.
-
-This also produces a column vector of size ${c_dimRef('_C_ = 48', DimStyle.C)}, which we describe as the position embedding.
-    `;
+    localizedCommentary(wt, 'embedding.positionEmbedding', {
+        token: c_str('B', 0, DimStyle.Token),
+        position: c_dimRef('3', DimStyle.T),
+        positionEmbedding: c_blockRef(t('embedding.positionEmbeddingTerm'), state.layout.posEmbedObj),
+        channels: c_dimRef('_C_ = 48', DimStyle.C),
+    });
     breakAfter();
 
     let t4_highlightPosEmbed = afterTime(null, 0.8);
 
     breakAfter();
 
-    commentary(wt)`
-Note that both of these position and token embeddings are learned during training (indicated by their blue color).
-
-Now that we have these two column vectors, we simply add them together to produce another column vector of size ${c_dimRef('_C_ = 48', DimStyle.C)}.
-`;
+    localizedCommentary(wt, 'embedding.addition', {
+        channels: c_dimRef('_C_ = 48', DimStyle.C),
+    });
 
     breakAfter();
 
@@ -75,10 +75,7 @@ Now that we have these two column vectors, we simply add them together to produc
 
     breakAfter();
 
-    commentary(wt)`
-We now run this same process for all of the tokens in the input sequence, creating a set of vectors which incorporate both the token values and their positions.
-
-`;
+    localizedCommentary(wt, 'embedding.sequence');
 
     breakAfter();
 
@@ -86,17 +83,15 @@ We now run this same process for all of the tokens in the input sequence, creati
 
     breakAfter();
 
-    commentary(wt)`
-Feel free to hover over individual cells on the ${c_blockRef('_input embedding_', state.layout.residual0)} matrix to see the computations and their sources.
-
-We see that running this process for all the tokens in the input sequence produces a matrix of size ${c_dimRef('_T_', DimStyle.T)} x ${c_dimRef('_C_', DimStyle.C)}.
-The ${c_dimRef('_T_', DimStyle.T)} stands for ${c_dimRef('_time_', DimStyle.T)}, i.e., you can think of tokens later in the sequence as later in time.
-The ${c_dimRef('_C_', DimStyle.C)} stands for ${c_dimRef('_channel_', DimStyle.C)}, but is also referred to as "feature" or "dimension" or "embedding size". This length, ${c_dimRef('_C_', DimStyle.C)},
-is one of the several "hyperparameters" of the model, and is chosen by the designer to in a tradeoff between model size and performance.
-
-This matrix, which we'll refer to as the ${c_blockRef('_input embedding_', state.layout.residual0)} is now ready to be passed down through the model.
-This collection of ${c_dimRef('T', DimStyle.T)} columns each of length ${c_dimRef('C', DimStyle.C)} will become a familiar sight throughout this guide.
-`;
+    localizedCommentary(wt, 'embedding.dimensions', {
+        inputEmbedding: c_blockRef(t('embedding.inputEmbeddingTerm'), state.layout.residual0),
+        timeSymbol: c_dimRef('_T_', DimStyle.T),
+        channelSymbol: c_dimRef('_C_', DimStyle.C),
+        timeTerm: c_dimRef(t('embedding.timeTerm'), DimStyle.T),
+        channelTerm: c_dimRef(t('embedding.channelTerm'), DimStyle.C),
+        timeColumns: c_dimRef('T', DimStyle.T),
+        channelLength: c_dimRef('C', DimStyle.C),
+    });
 
     cleanup(t9_cleanupInstant, [t3_moveTokenEmbed, t5_movePosEmbed, t6_plusSymAnim, t7_addAnim, t8_placeAnim]);
     cleanup(t10_fadeAnim, [t0_splitEmbedAnim, t1_fadeEmbedAnim, t2_highlightTokenEmbed, t4_highlightPosEmbed]);

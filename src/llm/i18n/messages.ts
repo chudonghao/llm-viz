@@ -166,12 +166,128 @@ the {normalizedEmbedding}, which is ready to be passed into the Self-Attention l
     'layerNorm.normalizedValuesTerm': 'normalized values',
     'layerNorm.inputEmbeddingMatrixTerm': 'input embedding matrix',
     'layerNorm.normalizedEmbeddingTerm': 'normalized input embedding',
+    'selfAttention.introduction': `
+The self-attention layer is perhaps the heart of the Transformer and of GPT. It's the phase where the
+columns in our input embedding matrix "talk" to each other. Up until now, and in all other phases,
+the columns can be regarded independently.
+
+The self-attention layer is made up of several heads, and we'll focus on one of them for now.`,
+
+    'selfAttention.qkv': `
+The first step is to produce three vectors for each of the {columns} columns from the {inputEmbedding}.
+These vectors are the Q, K, and V vectors:
+
+{qkvList}
+
+To produce one of these vectors, we perform a matrix-vector multiplication with a bias added. Each
+output cell is some linear combination of the input vector. E.g. for the {queries}, this is done with a dot product between
+a row of the {queryWeights} and a column of the {inputMatrix}.`,
+
+    'selfAttention.dotProduct': `
+The dot product operation, which we'll see a lot of, is quite simple: We pair each element from
+the first vector with the corresponding element from the second vector, multiply the pairs together
+and then add the results up.`,
+
+    'selfAttention.linearCombination': `
+
+This is a general and simple way of ensuring each output element can be influenced by all the
+elements in the input vector (where that influence is determined by the weights). Hence its frequent
+appearance in neural networks.
+
+We repeat this operation for each output cell in the Q, K, V vectors:`,
+
+    'selfAttention.lookup': `
+What do we do with our Q (query), K (key), and V (value) vectors? The naming
+gives us a hint: "key" and "value" are reminiscent of a dictionary in software, with keys mapping to
+values. Then "query" is what we use to look up the value.
+
+{softwareAnalogy}
+
+In the case of self-attention, instead of returning a single entry, we return some weighted
+combination of the entries. To find that weighting, we take a dot product between a Q vector and each
+of the K vectors. We normalize that weighting, before finally using it to multiply with the
+corresponding V vector, and then adding them all up.
+
+{attentionAnalogy}
+
+For a more concrete example, let's look at the 6th column ({queryPosition}), from which
+we will query from:`,
+
+    'selfAttention.scores': `
+The {K, V} entries of our lookup are the 6 columns in the past, and the Q value is the current time.
+
+We first calculate the dot product between the {query} of the current column ({queryPosition}) and the {keys}
+of each of the those previous columns. These are then stored in the corresponding row ({rowPosition})
+of the {attentionMatrix}.`,
+
+    'selfAttention.causal': `
+These dot products are a way of measuring the similarity between the two vectors. If they're very
+similar, the dot product will be large. If they're very different, the dot product will be small or
+negative.
+
+The idea of only using the query against past keys makes this _causal_ self-attention. That is,
+tokens can't "see into the future".
+
+Another element is that after we take the dot product, we divide by sqrt({scaleDimension}), where
+{vectorLength} is the length of the Q/K/V vectors. This scaling is done to prevent large values from
+dominating the normalization (softmax) in the next step.
+
+We'll mostly skip over the softmax operation (described later); suffice it to say, each row is normalized to sum
+to 1.`,
+
+    'selfAttention.valueWeighting': `
+Finally, we can produce the output vector for our column ({queryPosition}). We look at the ({rowPosition}) row of the
+{attentionMatrix} and for each element, multiply the corresponding {values} of the
+other columns element-wise.`,
+
+    'selfAttention.output': `
+Then we can add these up to produce the output vector. Thus, the output vector will be dominated by
+V vectors from columns that have high scores.
+
+Now we know the process, let's run it for all the columns.`,
+
+    'selfAttention.summary': `
+And that's the process for a head of the self-attention layer. So the main goal of self-attention is
+that each column wants to find relevant information from other columns and extract their values, and
+does so by comparing its _query_ vector to the _keys_ of those other columns. With the added restriction
+that it can only look in the past.
+`,
+
+    'selfAttention.normalizedInputTerm': 'normalized input embedding matrix',
+    'selfAttention.queryVectorsTerm': 'Q vectors',
+    'selfAttention.queryWeightTerm': 'Q-weight matrix',
+    'selfAttention.inputMatrixTerm': 'input matrix',
+    'selfAttention.queryVectorTerm': 'Q vector',
+    'selfAttention.keyVectorsTerm': 'K vectors',
+    'selfAttention.attentionMatrixTerm': 'attention matrix',
+    'selfAttention.normalizedAttentionTerm': 'normalized self-attention matrix',
+    'selfAttention.valueVectorTerm': 'V vector',
+    'selfAttention.queryLabel': 'Query vector',
+    'selfAttention.keyLabel': 'Key vector',
+    'selfAttention.valueLabel': 'Value vector',
+    'selfAttention.softwareTitle': 'Software analogy',
+    'selfAttention.lookupLabel': 'Lookup table:',
+    'selfAttention.queryProcessLabel': 'Query Process:',
+    'selfAttention.attentionTitle': 'Self Attention',
+    'selfAttention.normalizationLabel': 'normalization',
 } as const;
 
 export type MessageKey = keyof typeof en;
 
-type SlotNames<Text extends string> = Text extends `${string}{${infer Name}}${infer Rest}`
-    ? Name | SlotNames<Rest>
+type LowercaseLetter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
+    | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
+type SlotLetter = LowercaseLetter | Uppercase<LowercaseLetter>;
+type SlotCharacter = SlotLetter | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+
+type IsSlotTail<Text extends string> = Text extends '' ? true
+    : Text extends `${SlotCharacter}${infer Rest}` ? IsSlotTail<Rest> : false;
+type SlotName<Name extends string> = Name extends `${SlotLetter}${infer Rest}`
+    ? IsSlotTail<Rest> extends true ? Name : never
+    : never;
+
+// Match interpolate's ASCII slot names; notation such as {K, V} remains literal text.
+type SlotNames<Text extends string> = Text extends `${string}{${infer Rest}`
+    ? (Rest extends `${infer Name}}${string}` ? SlotName<Name> : never) | SlotNames<Rest>
     : never;
 
 /** Require the slots named in the English message; plain messages need no arguments. */
@@ -302,6 +418,68 @@ Transformer 块的第一步，是对这个矩阵进行_层归一化（layer norm
     'layerNorm.normalizedValuesTerm': '归一化后的数值',
     'layerNorm.inputEmbeddingMatrixTerm': '输入嵌入矩阵',
     'layerNorm.normalizedEmbeddingTerm': '归一化后的输入嵌入',
+    'selfAttention.introduction': `自注意力（self-attention）层可以说是 Transformer 和 GPT 的核心。在这里，输入嵌入矩阵中的各列会相互“交流”。在此前的步骤和其他阶段中，各列都可以独立处理。
+
+自注意力层由多个_注意力头（head）_组成，我们先关注其中一个。`,
+
+    'selfAttention.qkv': `首先，为{inputEmbedding}中的每一列（共 {columns} 列）生成三个向量，分别是 Q、K、V：
+
+{qkvList}
+
+生成其中一个向量时，我们先进行矩阵与向量的乘法，再加上偏置。因此，每个输出单元都是输入向量各元素的线性组合，再加上偏置。以{queries}为例：取{queryWeights}中的一行，与{inputMatrix}中的一列做点积。`,
+
+    'selfAttention.dotProduct': '_点积（dot product）_是后面会经常遇到的运算，过程很简单：将两个向量中位置对应的元素分别相乘，再把这些乘积相加。',
+    'selfAttention.linearCombination': `这种简单而通用的计算方式，让每个输出元素都能受到输入向量中所有元素的影响；影响的大小由权重决定。因此，它在神经网络中非常常见。
+
+接下来，对 Q、K、V 向量中的每个输出单元重复这一过程：`,
+
+    'selfAttention.lookup': `Q（查询）、K（键）和 V（值）向量有什么用？它们的名称提供了线索：“键”和“值”让人联想到软件中的字典，键对应着值，而“查询”用于查找这些值。
+
+{softwareAnalogy}
+
+在自注意力中，返回的是多个条目的加权组合。为了确定各条目的权重，我们先计算一个 Q 向量与各个 K 向量的点积，再将这些得分归一化。随后，用每个权重乘以对应的 V 向量，最后把结果相加。
+
+{attentionAnalogy}
+
+来看一个具体例子：我们将从第 6 列（{queryPosition}）发起查询。`,
+
+    'selfAttention.scores': `这里，查找表中的 {K, V} 条目来自当前位置及之前的 6 列，Q 则来自当前位置。
+
+首先，计算当前列（{queryPosition}）的{query}与这些列的{keys}之间的点积，再把结果存入{attentionMatrix}中对应的行（{rowPosition}）。`,
+
+    'selfAttention.causal': `点积可以用来衡量两个向量的相似程度：相似时，点积通常较大；差异较大时，点积可能较小，甚至为负数。
+
+查询只能使用当前位置及之前的键，这就是_因果自注意力（causal self-attention）_：词元不能“看到未来”。
+
+另外，点积结果还要除以 sqrt({scaleDimension})，其中 {vectorLength} 是 Q/K/V 向量的长度。这样的缩放可以避免过大的数值主导下一步的 Softmax 归一化。
+
+Softmax 运算将在后面的章节中介绍。这里先记住：它会将每一行的数值归一化，使这一行的和为 1。`,
+
+    'selfAttention.valueWeighting': '现在可以生成当前列（{queryPosition}）的输出向量了。查看{attentionMatrix}中 {rowPosition} 对应的那一行，用这一行中的每个元素分别乘以对应列的{values}中的各个元素。',
+    'selfAttention.output': `将这些加权后的向量相加，就得到输出向量。因此，注意力得分较高的列所对应的 V 向量，对输出的影响更大。
+
+了解这个过程后，我们再对所有列执行同样的操作。`,
+
+    'selfAttention.summary': `这就是自注意力层中一个注意力头的计算过程。每一列通过比较自己的_查询向量_与其他列的_键向量_，找到相关信息，并提取对应的值。整个过程还受到因果约束：只能使用当前位置及之前的信息。
+`,
+
+    'selfAttention.normalizedInputTerm': '归一化后的输入嵌入矩阵',
+    'selfAttention.queryVectorsTerm': 'Q 向量',
+    'selfAttention.queryWeightTerm': 'Q 权重矩阵',
+    'selfAttention.inputMatrixTerm': '输入矩阵',
+    'selfAttention.queryVectorTerm': 'Q 向量',
+    'selfAttention.keyVectorsTerm': 'K 向量',
+    'selfAttention.attentionMatrixTerm': '注意力矩阵',
+    'selfAttention.normalizedAttentionTerm': '归一化后的自注意力矩阵',
+    'selfAttention.valueVectorTerm': 'V 向量',
+    'selfAttention.queryLabel': '查询向量（Query vector）',
+    'selfAttention.keyLabel': '键向量（Key vector）',
+    'selfAttention.valueLabel': '值向量（Value vector）',
+    'selfAttention.softwareTitle': '软件中的类比',
+    'selfAttention.lookupLabel': '查找表：',
+    'selfAttention.queryProcessLabel': '查询过程：',
+    'selfAttention.attentionTitle': '自注意力',
+    'selfAttention.normalizationLabel': '归一化',
 };
 
 export const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, 'zh-CN': zhCN };

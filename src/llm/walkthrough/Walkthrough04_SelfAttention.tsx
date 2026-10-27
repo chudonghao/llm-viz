@@ -11,10 +11,12 @@ import { Mat4f } from "@/src/utils/matrix";
 import { Dim, Vec3, Vec4 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
 import { processUpTo, startProcessBefore } from "./Walkthrough00_Intro";
-import { embedInline } from "./Walkthrough01_Prelim";
-import { Colors, commentary, DimStyle, dimStyleColor, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
+import { Colors, embed, localizedCommentary, DimStyle, dimStyleColor, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
 import { BlockText } from '../components/CommentaryHelpers';
 import clsx from 'clsx';
+import { translate, type MessageKey } from '../i18n/messages';
+import { useI18n } from '../i18n/LanguageProvider';
+import { useProgramState } from '../Sidebar';
 
 export function walkthrough04_SelfAttention(args: IWalkthroughArgs) {
     let { walkthrough: wt, layout, state, tools: { afterTime, c_str, c_blockRef, c_dimRef, breakAfter, cleanup } } = args;
@@ -24,18 +26,15 @@ export function walkthrough04_SelfAttention(args: IWalkthroughArgs) {
         return;
     }
 
+    const t = (key: MessageKey) => translate(wt.locale, key);
+
     let block0 = layout.blocks[0];
     let head2 = block0.heads[2];
 
     setInitialCamera(state, new Vec3(-125.258, 0.000, -178.805), new Vec3(294.000, 12.800, 2.681));
     wt.dimHighlightBlocks = [layout.residual0, block0.ln1.lnResid, ...head2.cubes];
 
-    commentary(wt, null, 0)`
-The self-attention layer is perhaps the heart of the Transformer and of GPT. It's the phase where the
-columns in our input embedding matrix "talk" to each other. Up until now, and in all other phases,
-the columns can be regarded independently.
-
-The self-attention layer is made up of several heads, and we'll focus on one of them for now.`;
+    localizedCommentary(wt, 'selfAttention.introduction', {}, null, 0);
     breakAfter();
     let t_moveCamera = afterTime(null, 1.0);
     let t_highlightHeads = afterTime(null, 2.0);
@@ -43,29 +42,21 @@ The self-attention layer is made up of several heads, and we'll focus on one of 
     let t_focusHeads = focusSelfAttentionHeadTimers(args, 3.0);
 
     breakAfter();
-    commentary(wt)`
-The first step is to produce three vectors for each of the ${c_dimRef('T', DimStyle.T)} columns from the ${c_blockRef('normalized input embedding matrix', block0.ln1.lnResid)}.
-These vectors are the Q, K, and V vectors:
-
-${embedInline(<ul>
-    <li>Q: <BlockText blk={head2.qBlock}>Query vector</BlockText></li>
-    <li>K: <BlockText blk={head2.kBlock}>Key vector</BlockText></li>
-    <li>V: <BlockText blk={head2.vBlock}>Value vector</BlockText></li>
-</ul>)}
-
-To produce one of these vectors, we perform a matrix-vector multiplication with a bias added. Each
-output cell is some linear combination of the input vector. E.g. for the ${c_blockRef('Q vectors', head2.qBlock)}, this is done with a dot product between
-a row of the ${c_blockRef('Q-weight matrix', head2.qWeightBlock)} and a column of the ${c_blockRef('input matrix', block0.ln1.lnResid)}.`;
+    localizedCommentary(wt, 'selfAttention.qkv', {
+        columns: c_dimRef('T', DimStyle.T),
+        inputEmbedding: c_blockRef(t('selfAttention.normalizedInputTerm'), block0.ln1.lnResid),
+        qkvList: embed(QueryKeyValueList),
+        queries: c_blockRef(t('selfAttention.queryVectorsTerm'), head2.qBlock),
+        queryWeights: c_blockRef(t('selfAttention.queryWeightTerm'), head2.qWeightBlock),
+        inputMatrix: c_blockRef(t('selfAttention.inputMatrixTerm'), block0.ln1.lnResid),
+    });
     breakAfter();
 
     let t_focusQCol = afterTime(null, 1.0);
     let t_qIterColDot = afterTime(null, 3.0);
 
     breakAfter();
-    commentary(wt)`
-The dot product operation, which we'll see a lot of, is quite simple: We pair each element from
-the first vector with the corresponding element from the second vector, multiply the pairs together
-and then add the results up.`;
+    localizedCommentary(wt, 'selfAttention.dotProduct');
     breakAfter();
 
     let t_moveDotCells = afterTime(null, 2.0, 0.5);
@@ -77,13 +68,7 @@ and then add the results up.`;
     let t_moveToDest = afterTime(null, 0.5);
 
     breakAfter();
-    commentary(wt)`
-
-This is a general and simple way of ensuring each output element can be influenced by all the
-elements in the input vector (where that influence is determined by the weights). Hence its frequent
-appearance in neural networks.
-
-We repeat this operation for each output cell in the Q, K, V vectors:`;
+    localizedCommentary(wt, 'selfAttention.linearCombination');
     breakAfter();
 
     let t_revertFocusCol = afterTime(null, 0.25, 0.5);
@@ -91,66 +76,11 @@ We repeat this operation for each output cell in the Q, K, V vectors:`;
     let t_processQkv = afterTime(null, 5.0);
 
     breakAfter();
-    commentary(wt)`
-What do we do with our Q (query), K (key), and V (value) vectors? The naming
-gives us a hint: "key" and "value" are reminiscent of a dictionary in software, with keys mapping to
-values. Then "query" is what we use to look up the value.
-
-${embedInline(<div className='ml-4'>
-    <div className='mt-1 text-center italic'>Software analogy</div>
-    <div className='text-sm mt-1 mb-1 text-gray-600'>Lookup table:</div>
-    <div className='font-mono'>{'table = { "key0": "value0", "key1": "value1", ... }'}</div>
-    <div className='text-sm mt-1 mb-1 text-gray-600'>Query Process:</div>
-    <div className='font-mono'>{'table["key1"] => "value1"'}</div>
-</div>)}
-
-In the case of self-attention, instead of returning a single entry, we return some weighted
-combination of the entries. To find that weighting, we take a dot product between a Q vector and each
-of the K vectors. We normalize that weighting, before finally using it to multiply with the
-corresponding V vector, and then adding them all up.
-
-${embedInline((() => {
-    let keyCol = dimStyleColor(DimStyle.Intermediates);
-    let valCol = dimStyleColor(DimStyle.A);
-    let qCol = dimStyleColor(DimStyle.Aggregates);
-
-    return <div className='ml-4'>
-        <div className='mt-1 text-center italic'>Self Attention</div>
-        <div className='text-sm mt-2 mb-1 text-gray-600'>Lookup table:</div>
-        <div className='font-mono flex items-center'>K:
-            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
-            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
-            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
-        </div>
-        <div className='font-mono flex items-center'>V:
-            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
-            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
-            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
-        </div>
-        <div className='text-sm mt-2 mb-1 text-gray-600'>Query Process:</div>
-        <div className='font-mono flex items-center'>
-            <div className='flex items-center'>Q: <div className='mx-2 my-1'>{makeTextVector(qCol)}</div></div>
-        </div>
-        <div className='font-mono flex items-center -ml-2 mt-2'>
-            <div className='flex items-center mx-2'>w0 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
-            <div className='flex items-center mx-2'>w1 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
-            <div className='flex items-center mx-2'>w2 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
-        </div>
-        <div className='font-mono flex items-center my-2'>
-            [w0n, w1n, w2n] =&nbsp;<span className='italic'>normalization</span>([w0, w1, w2])
-        </div>
-        <div className='font-mono flex items-center'>
-            result =
-            w0n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>&nbsp;+&nbsp;
-            w1n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>&nbsp;+&nbsp;
-            w2n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>
-        </div>
-
-    </div>;
-})())}
-
-For a more concrete example, let's look at the 6th column (${c_dimRef('t = 5', DimStyle.T)}), from which
-we will query from:`;
+    localizedCommentary(wt, 'selfAttention.lookup', {
+        softwareAnalogy: embed(SoftwareLookupExample),
+        attentionAnalogy: embed(AttentionLookupExample),
+        queryPosition: c_dimRef('t = 5', DimStyle.T),
+    });
     breakAfter();
 
     let t_focusQKVCols = afterTime(null, 1.0);
@@ -159,41 +89,34 @@ we will query from:`;
 // It would like to find relevant information from other columns and extract their values. The other
 // columns each have a K (key) vector, which represents the information that that column has, and our
 // Q (query) vector is what information is relevant to us.
-    commentary(wt)`
-The {K, V} entries of our lookup are the 6 columns in the past, and the Q value is the current time.
-
-We first calculate the dot product between the ${c_blockRef('Q vector', head2.qBlock)} of the current column (${c_dimRef('t = 5', DimStyle.T)}) and the ${c_blockRef('K vectors', head2.kBlock)}
-of each of the those previous columns. These are then stored in the corresponding row (${c_dimRef('t = 5', DimStyle.T)})
-of the ${c_blockRef('attention matrix', head2.attnMtx)}.`;
+    localizedCommentary(wt, 'selfAttention.scores', {
+        query: c_blockRef(t('selfAttention.queryVectorTerm'), head2.qBlock),
+        queryPosition: c_dimRef('t = 5', DimStyle.T),
+        keys: c_blockRef(t('selfAttention.keyVectorsTerm'), head2.kBlock),
+        rowPosition: c_dimRef('t = 5', DimStyle.T),
+        attentionMatrix: c_blockRef(t('selfAttention.attentionMatrixTerm'), head2.attnMtx),
+    });
     breakAfter();
 
     let t_processAttnRow = afterTime(null, 3.0);
 
     breakAfter();
-    commentary(wt)`
-These dot products are a way of measuring the similarity between the two vectors. If they're very
-similar, the dot product will be large. If they're very different, the dot product will be small or
-negative.
-
-The idea of only using the query against past keys makes this _causal_ self-attention. That is,
-tokens can't "see into the future".
-
-Another element is that after we take the dot product, we divide by sqrt(${c_dimRef('A', DimStyle.A)}), where
-${c_dimRef('A', DimStyle.A)} is the length of the Q/K/V vectors. This scaling is done to prevent large values from
-dominating the normalization (softmax) in the next step.
-
-We'll mostly skip over the softmax operation (described later); suffice it to say, each row is normalized to sum
-to 1.`;
+    localizedCommentary(wt, 'selfAttention.causal', {
+        scaleDimension: c_dimRef('A', DimStyle.A),
+        vectorLength: c_dimRef('A', DimStyle.A),
+    });
     breakAfter();
 
     let t_processAttnSmAggRow = afterTime(null, 1.0);
     let t_processAttnSmRow = afterTime(null, 2.0);
 
     breakAfter();
-    commentary(wt)`
-Finally, we can produce the output vector for our column (${c_dimRef('t = 5', DimStyle.T)}). We look at the (${c_dimRef('t = 5', DimStyle.T)}) row of the
-${c_blockRef('normalized self-attention matrix', head2.attnMtxSm)} and for each element, multiply the corresponding ${c_blockRef('V vector', head2.vBlock)} of the
-other columns element-wise.`;
+    localizedCommentary(wt, 'selfAttention.valueWeighting', {
+        queryPosition: c_dimRef('t = 5', DimStyle.T),
+        rowPosition: c_dimRef('t = 5', DimStyle.T),
+        attentionMatrix: c_blockRef(t('selfAttention.normalizedAttentionTerm'), head2.attnMtxSm),
+        values: c_blockRef(t('selfAttention.valueVectorTerm'), head2.vBlock),
+    });
     breakAfter();
 
     let t_zoomVOutput = afterTime(null, 0.4, 0.5);
@@ -206,11 +129,7 @@ other columns element-wise.`;
     let t_finalizeVOutput = afterTime(null, 0.5, 0.5);
 
     breakAfter();
-    commentary(wt)`
-Then we can add these up to produce the output vector. Thus, the output vector will be dominated by
-V vectors from columns that have high scores.
-
-Now we know the process, let's run it for all the columns.`;
+    localizedCommentary(wt, 'selfAttention.output');
 
     breakAfter();
 
@@ -219,12 +138,7 @@ Now we know the process, let's run it for all the columns.`;
     let t_processRemain = afterTime(null, 8.0);
 
     breakAfter();
-    commentary(wt)`
-And that's the process for a head of the self-attention layer. So the main goal of self-attention is
-that each column wants to find relevant information from other columns and extract their values, and
-does so by comparing its _query_ vector to the _keys_ of those other columns. With the added restriction
-that it can only look in the past.
-`;
+    localizedCommentary(wt, 'selfAttention.summary');
 
 // Running this process for all the columns produces our self-attention matrix, which is a square
 // matrix, T x T, and due to the causal nature of the process, is a lower triangular matrix.
@@ -767,5 +681,81 @@ function makeTextVector(col: Vec4, count: number = 3) {
         {makeArray(3, 0).map((_, i) => {
             return <div key={i} className={"w-3 h-3 border-2 mb-[-2px]"} style={{ borderColor: col.toHexColor(), backgroundColor: bgColor.toHexColor() }} />;
         })}
+    </div>;
+}
+
+function QueryKeyValueList() {
+    const { t } = useI18n();
+    const head2 = useProgramState().layout.blocks[0].heads[2];
+
+    return <ul>
+        <li>Q: <BlockText blk={head2.qBlock}>{t('selfAttention.queryLabel')}</BlockText></li>
+        <li>K: <BlockText blk={head2.kBlock}>{t('selfAttention.keyLabel')}</BlockText></li>
+        <li>V: <BlockText blk={head2.vBlock}>{t('selfAttention.valueLabel')}</BlockText></li>
+    </ul>;
+}
+
+function SoftwareLookupExample() {
+    const { t } = useI18n();
+
+    return <div className='ml-4'>
+        <div className='mt-1 text-center italic'>{t('selfAttention.softwareTitle')}</div>
+        <div className='text-sm mt-1 mb-1 text-gray-600'>{t('selfAttention.lookupLabel')}</div>
+        <div className='font-mono'>{'table = { "key0": "value0", "key1": "value1", ... }'}</div>
+        <div className='text-sm mt-1 mb-1 text-gray-600'>{t('selfAttention.queryProcessLabel')}</div>
+        <div className='font-mono'>{'table["key1"] => "value1"'}</div>
+    </div>;
+}
+
+function AttentionLookupExample() {
+    const { t } = useI18n();
+
+    const keyCol = dimStyleColor(DimStyle.Intermediates);
+    const valCol = dimStyleColor(DimStyle.A);
+    const qCol = dimStyleColor(DimStyle.Aggregates);
+
+    return <div className='ml-4'>
+        <div className='mt-1 text-center italic'>{t('selfAttention.attentionTitle')}</div>
+        <div className='text-sm mt-2 mb-1 text-gray-600'>{t('selfAttention.lookupLabel')}</div>
+        <div className='font-mono flex items-center'>K:
+            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
+            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
+            <div className='mx-2 my-1'>{makeTextVector(keyCol)}</div>
+        </div>
+        <div className='font-mono flex items-center'>V:
+            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
+            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
+            <div className='mx-2 my-1'>{makeTextVector(valCol)}</div>
+        </div>
+        <div className='text-sm mt-2 mb-1 text-gray-600'>{t('selfAttention.queryProcessLabel')}</div>
+        <div className='font-mono flex items-center'>
+            <div className='flex items-center'>Q: <div className='mx-2 my-1'>{makeTextVector(qCol)}</div></div>
+        </div>
+        <div className='font-mono flex flex-wrap items-center -ml-2 mt-2'>
+            <div className='flex items-center mx-2'>w0 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
+            <div className='flex items-center mx-2'>w1 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
+            <div className='flex items-center mx-2'>w2 = <div className='m-1'>{makeTextVector(qCol)}</div>.<div className='m-1'>{makeTextVector(keyCol)}</div></div>
+        </div>
+        <div className='font-mono my-2'>
+            [w0n, w1n, w2n] =
+            <div className='ml-4'>
+                <span className='italic'>{t('selfAttention.normalizationLabel')}</span>([w0, w1, w2])
+            </div>
+        </div>
+        <div className='font-mono'>
+            result =
+            <div className='flex flex-wrap items-center ml-4'>
+                <div className='flex items-center whitespace-nowrap'>
+                    w0n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>
+                </div>
+                <div className='flex items-center whitespace-nowrap'>
+                    +&nbsp;w1n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>
+                </div>
+                <div className='flex items-center whitespace-nowrap'>
+                    +&nbsp;w2n * <div className='ml-2 mr-2 my-1'>{makeTextVector(valCol)}</div>
+                </div>
+            </div>
+        </div>
+
     </div>;
 }

@@ -1,8 +1,9 @@
 import { Vec3 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
-import { commentary, DimStyle, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
+import { localizedCommentary, DimStyle, IWalkthroughArgs, moveCameraTo, setInitialCamera } from "./WalkthroughTools";
 import { lerp, lerpSmoothstep } from "@/src/utils/math";
 import { processUpTo, startProcessBefore } from "./Walkthrough00_Intro";
+import { translate, type MessageKey } from '../i18n/messages';
 
 export function walkthrough06_Projection(args: IWalkthroughArgs) {
     let { walkthrough: wt, state, layout, tools: { breakAfter, afterTime, c_blockRef, c_dimRef, cleanup } } = args;
@@ -11,19 +12,20 @@ export function walkthrough06_Projection(args: IWalkthroughArgs) {
         return;
     }
 
+    const t = (key: MessageKey) => translate(wt.locale, key);
+
     setInitialCamera(state, new Vec3(-73.167, 0.000, -270.725), new Vec3(293.606, 2.613, 1.366));
     let block = layout.blocks[0];
     wt.dimHighlightBlocks = [...block.heads.map(h => h.vOutBlock), block.projBias, block.projWeight, block.attnOut];
 
     let outBlocks = block.heads.map(h => h.vOutBlock);
 
-    commentary(wt, null, 0)`
-
-After the self-attention process, we have outputs from each of the heads. These outputs are the
-appropriately mixed V vectors, influenced by the Q and K vectors.
-
-To combine the ${c_blockRef('output vectors', outBlocks)} from each head, we simply stack them on top of each other. So, for time
-${c_dimRef('t = 4', DimStyle.T)}, we go from 3 vectors of length ${c_dimRef('A = 16', DimStyle.A)} to 1 vector of length ${c_dimRef('C = 48', DimStyle.C)}.`;
+    localizedCommentary(wt, 'projection.stacking', {
+        outputVectors: c_blockRef(t('projection.outputVectorsTerm'), outBlocks),
+        time: c_dimRef('t = 4', DimStyle.T),
+        headSize: c_dimRef('A = 16', DimStyle.A),
+        channels: c_dimRef('C = 48', DimStyle.C),
+    }, null, 0);
 
     breakAfter();
 
@@ -33,13 +35,11 @@ ${c_dimRef('t = 4', DimStyle.T)}, we go from 3 vectors of length ${c_dimRef('A =
 
     breakAfter();
 
-    commentary(wt)`
-
-It's worth noting that in GPT, the length of the vectors within a head (${c_dimRef('A = 16', DimStyle.A)}) is equal to ${c_dimRef('C', DimStyle.C)} / num_heads.
-This ensures that when we stack them back together, we get the original length, ${c_dimRef('C', DimStyle.C)}.
-
-From here, we perform the projection to get the output of the layer. This is a simple matrix-vector
-multiplication on a per-column basis, with a bias added.`;
+    localizedCommentary(wt, 'projection.linear', {
+        headSize: c_dimRef('A = 16', DimStyle.A),
+        channels: c_dimRef('C', DimStyle.C),
+        originalChannels: c_dimRef('C', DimStyle.C),
+    });
 
     breakAfter();
 
@@ -47,12 +47,7 @@ multiplication on a per-column basis, with a bias added.`;
 
     breakAfter();
 
-    commentary(wt)`
-
-Now we have the output of the self-attention layer. Instead of passing this output directly to the
-next phase, we add it element-wise to the input embedding. This process, denoted by the green
-vertical arrow, is called the _residual connection_ or _residual pathway_.
-`;
+    localizedCommentary(wt, 'projection.residual');
 
     breakAfter();
 
@@ -63,14 +58,7 @@ vertical arrow, is called the _residual connection_ or _residual pathway_.
 
     breakAfter();
 
-    commentary(wt)`
-
-Like layer normalization, the residual pathway is important for enabling effective learning in deep
-neural networks.
-
-Now with the result of self-attention in hand, we can pass it onto the next section of the transformer:
-the feed-forward network.
-`;
+    localizedCommentary(wt, 'projection.summary');
 
     breakAfter();
 

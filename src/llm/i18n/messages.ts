@@ -270,6 +270,39 @@ that it can only look in the past.
     'selfAttention.queryProcessLabel': 'Query Process:',
     'selfAttention.attentionTitle': 'Self Attention',
     'selfAttention.normalizationLabel': 'normalization',
+    'projection.stacking': `
+
+After the self-attention process, we have outputs from each of the heads. These outputs are the
+appropriately mixed V vectors, influenced by the Q and K vectors.
+
+To combine the {outputVectors} from each head, we simply stack them on top of each other. So, for time
+{time}, we go from 3 vectors of length {headSize} to 1 vector of length {channels}.`,
+
+    'projection.linear': `
+
+It's worth noting that in GPT, the length of the vectors within a head ({headSize}) is equal to {channels} / num_heads.
+This ensures that when we stack them back together, we get the original length, {originalChannels}.
+
+From here, we perform the projection to get the output of the layer. This is a simple matrix-vector
+multiplication on a per-column basis, with a bias added.`,
+
+    'projection.residual': `
+
+Now we have the output of the self-attention layer. Instead of passing this output directly to the
+next phase, we add it element-wise to the input embedding. This process, denoted by the green
+vertical arrow, is called the _residual connection_ or _residual pathway_.
+`,
+
+    'projection.summary': `
+
+Like layer normalization, the residual pathway is important for enabling effective learning in deep
+neural networks.
+
+Now with the result of self-attention in hand, we can pass it onto the next section of the transformer:
+the feed-forward network.
+`,
+
+    'projection.outputVectorsTerm': 'output vectors',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -480,6 +513,20 @@ Softmax 运算将在后面的章节中介绍。这里先记住：它会将每一
     'selfAttention.queryProcessLabel': '查询过程：',
     'selfAttention.attentionTitle': '自注意力',
     'selfAttention.normalizationLabel': '归一化',
+    'projection.stacking': `经过自注意力计算，各个注意力头都生成了自己的输出。这些输出由 V 向量加权混合而成，混合权重由 Q 和 K 向量决定。
+
+将各个注意力头的{outputVectors}沿向量长度方向拼接起来，即可合并它们。以时间位置 {time} 为例，3 个长度为 {headSize} 的向量，会拼成 1 个长度为 {channels} 的向量。`,
+
+    'projection.linear': `在 GPT 中，每个注意力头内的向量长度（{headSize}）等于 {channels} / num_heads，其中 num_heads 是注意力头数。因此，把各个头的输出拼接起来后，向量长度就恢复为 {originalChannels}。
+
+接下来进行_投影（projection）_，得到这一层的输出：对每一列进行矩阵与向量的乘法，再加上偏置。`,
+
+    'projection.residual': '现在得到了自注意力层的输出。将它与输入嵌入逐元素相加，再传入下一阶段。图中的绿色竖直箭头表示这一步，称为_残差连接（residual connection）_，也称_残差通路（residual pathway）_。',
+    'projection.summary': `与层归一化一样，残差通路有助于深度神经网络进行有效学习。
+
+接下来，将自注意力的计算结果传入 Transformer 的下一部分：_前馈网络（feed-forward network）_。`,
+
+    'projection.outputVectorsTerm': '输出向量',
 };
 
 export const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, 'zh-CN': zhCN };

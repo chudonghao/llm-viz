@@ -1,7 +1,7 @@
 import React from "react";
 import { Dim, Vec3 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
-import { commentary, DimStyle, dimStyleColor, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
+import { embed, localizedCommentary, DimStyle, dimStyleColor, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
 import { dimProps, findSubBlocks, splitGrid } from "../Annotations";
 import { lerp } from "@/src/utils/math";
 import { IBlkDef, getBlkDimensions } from "../GptModelLayout";
@@ -9,6 +9,7 @@ import { processUpTo, startProcessBefore } from "./Walkthrough00_Intro";
 import { drawDataFlow } from "../components/DataFlow";
 import { drawDependences } from "../Interaction";
 import { makeArray, makeArrayRange } from "@/src/utils/data";
+import { translate, type MessageKey } from '../i18n/messages';
 
 export function walkthrough07_Mlp(args: IWalkthroughArgs) {
     let { walkthrough: wt, state, layout, tools: { afterTime, c_blockRef, c_dimRef, breakAfter, cleanup } } = args;
@@ -17,76 +18,64 @@ export function walkthrough07_Mlp(args: IWalkthroughArgs) {
         return;
     }
 
+    const t = (key: MessageKey) => translate(wt.locale, key);
+
     let block = layout.blocks[0];
 
     setInitialCamera(state, new Vec3(-154.755, 0.000, -460.042), new Vec3(289.100, -8.900, 2.298));
     wt.dimHighlightBlocks = [block.ln2.lnResid, block.mlpAct, block.mlpFc, block.mlpFcBias, block.mlpFcWeight, block.mlpProjBias, block.mlpProjWeight, block.mlpResult, block.mlpResidual];
 
-    commentary(wt)`
-
-The next half of the transformer block, after the self-attention, is the MLP (multi-layer
-perceptron). A bit of a mouthful, but here it's a simple neural network with two layers.
-
-Like with self-attention, we perform a ${c_blockRef('layer normalization', block.ln2.lnResid)} before the vectors enter the MLP.
-
-In the MLP, we put each of our ${c_dimRef('C = 48', DimStyle.C)} length column vectors (independently) through:
-
-1. A ${c_blockRef('linear transformation', block.mlpFcWeight)} with a ${c_blockRef('bias', block.mlpFcBias)} added, to a vector of length ${c_dimRef('4 * C', DimStyle.C4)}.
-
-2. A GELU activation function (element-wise)
-
-3. A ${c_blockRef('linear transformation', block.mlpProjWeight)} with a ${c_blockRef('bias', block.mlpProjBias)} added, back to a vector of length ${c_dimRef('C', DimStyle.C)}
-
-Let's track one of those vectors:
-`;
+    localizedCommentary(wt, 'mlp.introduction', {
+        layerNorm: c_blockRef(t('mlp.layerNormTerm'), block.ln2.lnResid),
+        channels: c_dimRef('C = 48', DimStyle.C),
+        expansion: c_blockRef(t('mlp.linearTransformationTerm'), block.mlpFcWeight),
+        expansionBias: c_blockRef(t('mlp.biasTerm'), block.mlpFcBias),
+        expandedChannels: c_dimRef('4 * C', DimStyle.C4),
+        projection: c_blockRef(t('mlp.linearTransformationTerm'), block.mlpProjWeight),
+        projectionBias: c_blockRef(t('mlp.biasTerm'), block.mlpProjBias),
+        outputChannels: c_dimRef('C', DimStyle.C),
+    });
     breakAfter();
 
     let t0_fadeOut = afterTime(null, 1.0);
 
     breakAfter();
 
-commentary(wt)`
-We first run through the matrix-vector multiplication with bias added, expanding the vector to length ${c_dimRef('4 * C', DimStyle.C4)}. (Note that the output matrix is transposed here.
-This is purely for vizualization purposes.)
-`;
+    localizedCommentary(wt, 'mlp.expansion', {
+        expandedChannels: c_dimRef('4 * C', DimStyle.C4),
+    });
     breakAfter();
 
     let t1_process = afterTime(null, 3.0);
 
     breakAfter();
 
-commentary(wt)`
-Next, we apply the GELU activation function to each element of the vector. This is a key part of any neural network, where we introduce some non-linearity into the model. The specific function used, GELU,
-looks a lot like a ReLU function (computed as ${<code>max(0, x)</code>}), but it has a smooth curve rather than a sharp corner.
-
-${<ReluGraph />}
-
-`;
+    localizedCommentary(wt, 'mlp.activation', {
+        reluFormula: <code>max(0, x)</code>,
+        activationGraph: embed(ReluGraph),
+    });
     breakAfter();
 
     let t2_process = afterTime(null, 3.0);
 
     breakAfter();
 
-commentary(wt)`
-We then project the vector back down to length ${c_dimRef('C', DimStyle.C)} with another matrix-vector multiplication with bias added.
-`;
+    localizedCommentary(wt, 'mlp.projection', {
+        channels: c_dimRef('C', DimStyle.C),
+    });
     breakAfter();
 
     let t3_process = afterTime(null, 3.0);
 
     breakAfter();
 
-commentary(wt)`
-Like in the self-attention + projection section, we add the result of the MLP to its input, element-wise.
-`;
+    localizedCommentary(wt, 'mlp.residual');
     breakAfter();
 
     let t4_process = afterTime(null, 3.0);
 
     breakAfter();
-commentary(wt)`
-We can now repeat this process for all of the columns in the input.`;
+    localizedCommentary(wt, 'mlp.sequence');
 
     breakAfter();
 
@@ -96,9 +85,7 @@ We can now repeat this process for all of the columns in the input.`;
 
     breakAfter();
 
-commentary(wt)`
-And that's the MLP completed. We now have the output of the transformer block, which is ready to be passed to the next block.
-`;
+    localizedCommentary(wt, 'mlp.summary');
 
     let targetIdx = 3;
     let inputBlk = block.ln2.lnResid;

@@ -303,6 +303,55 @@ the feed-forward network.
 `,
 
     'projection.outputVectorsTerm': 'output vectors',
+    'mlp.introduction': `
+
+The next half of the transformer block, after the self-attention, is the MLP (multi-layer
+perceptron). A bit of a mouthful, but here it's a simple neural network with two layers.
+
+Like with self-attention, we perform a {layerNorm} before the vectors enter the MLP.
+
+In the MLP, we put each of our {channels} length column vectors (independently) through:
+
+1. A {expansion} with a {expansionBias} added, to a vector of length {expandedChannels}.
+
+2. A GELU activation function (element-wise)
+
+3. A {projection} with a {projectionBias} added, back to a vector of length {outputChannels}
+
+Let's track one of those vectors:
+`,
+
+    'mlp.expansion': `
+We first run through the matrix-vector multiplication with bias added, expanding the vector to length {expandedChannels}. (Note that the output matrix is transposed here.
+This is purely for vizualization purposes.)
+`,
+
+    'mlp.activation': `
+Next, we apply the GELU activation function to each element of the vector. This is a key part of any neural network, where we introduce some non-linearity into the model. The specific function used, GELU,
+looks a lot like a ReLU function (computed as {reluFormula}), but it has a smooth curve rather than a sharp corner.
+
+{activationGraph}
+
+`,
+
+    'mlp.projection': `
+We then project the vector back down to length {channels} with another matrix-vector multiplication with bias added.
+`,
+
+    'mlp.residual': `
+Like in the self-attention + projection section, we add the result of the MLP to its input, element-wise.
+`,
+
+    'mlp.sequence': `
+We can now repeat this process for all of the columns in the input.`,
+
+    'mlp.summary': `
+And that's the MLP completed. We now have the output of the transformer block, which is ready to be passed to the next block.
+`,
+
+    'mlp.layerNormTerm': 'layer normalization',
+    'mlp.linearTransformationTerm': 'linear transformation',
+    'mlp.biasTerm': 'bias',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -527,6 +576,32 @@ Softmax 运算将在后面的章节中介绍。这里先记住：它会将每一
 接下来，将自注意力的计算结果传入 Transformer 的下一部分：_前馈网络（feed-forward network）_。`,
 
     'projection.outputVectorsTerm': '输出向量',
+    'mlp.introduction': `自注意力之后，Transformer 块的后半部分是_多层感知机（multi-layer perceptron，MLP）_。这里的 MLP 是一个包含两个线性层的简单神经网络。
+
+与自注意力部分一样，向量进入 MLP 前，先进行{layerNorm}。
+
+MLP 会独立处理每个长度为 {channels} 的列向量，依次执行：
+
+1. 进行{expansion}并加上{expansionBias}，将向量长度扩展为 {expandedChannels}。
+
+2. 对向量中的每个元素应用 GELU 激活函数。
+
+3. 再进行一次{projection}并加上{projectionBias}，将向量长度恢复为 {outputChannels}。
+
+接下来，跟踪其中一个向量的计算过程：`,
+
+    'mlp.expansion': '首先，进行矩阵与向量的乘法，再加上偏置，把向量长度扩展为 {expandedChannels}。为了便于展示，图中的输出矩阵采用转置后的布局。',
+    'mlp.activation': `接下来，对向量中的每个元素应用 GELU _激活函数（activation function）_，为模型引入_非线性（non-linearity）_。这是神经网络中的关键环节。这里使用的 GELU 与 ReLU（计算式为 {reluFormula}）形状相似，但 GELU 的曲线平滑，没有 ReLU 那样的尖锐转折。
+
+{activationGraph}`,
+
+    'mlp.projection': '然后，再进行一次矩阵与向量的乘法并加上偏置，将向量长度恢复为 {channels}。',
+    'mlp.residual': '与前面的自注意力和投影部分一样，这里也使用残差连接：将 MLP 的输出与本节层归一化之前的输入逐元素相加。',
+    'mlp.sequence': '现在，对输入中的所有列重复上述过程。',
+    'mlp.summary': '至此，MLP 的计算就完成了。我们得到了这个 Transformer 块的输出，可以将它传入下一个块。',
+    'mlp.layerNormTerm': '层归一化',
+    'mlp.linearTransformationTerm': '线性变换',
+    'mlp.biasTerm': '偏置',
 };
 
 export const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, 'zh-CN': zhCN };

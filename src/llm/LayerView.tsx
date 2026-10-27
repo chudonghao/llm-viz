@@ -20,6 +20,9 @@ import { WelcomePopup } from './WelcomePopup';
 import { KeyboardManagerContext, KeyboardOrder, useGlobalKeyboard } from '@/src/utils/keyboard';
 import { Resizer } from '../utils/Resizer';
 import { ModelSelectorToolbar } from './components/ModelSelectorToolbar';
+import { useI18n } from './i18n/LanguageProvider';
+import type { Locale } from './i18n/locale';
+import { setWalkthroughLocale } from './walkthrough/Walkthrough';
 
 async function fetchTensorData(url: string): Promise<ITensorSet> {
     let resp = await fetch(url);
@@ -33,6 +36,7 @@ async function fetchTensorData(url: string): Promise<ITensorSet> {
 }
 
 export function LayerView() {
+    const { locale, t } = useI18n();
     let [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
     let [dataAndModel, setDataAndModel] = useState<IDataAndModel | null>(null);
     let [canvasRender, setCanvasRender] = useState<CanvasRender | null>(null);
@@ -59,6 +63,9 @@ export function LayerView() {
     }
 
     useGlobalKeyboard(KeyboardOrder.MainPage, (ev: KeyboardEvent) => {
+        if (ev.target instanceof Element && ev.target.closest('input, select, textarea, button, a, [contenteditable="true"]')) {
+            return;
+        }
         if (!canvasRender?.progState) {
             return;
         }
@@ -180,6 +187,10 @@ export function LayerView() {
     }, [canvasRender, dataAndModel]);
 
     useLayoutEffect(() => {
+        canvasRender?.setLocale(locale);
+    }, [canvasRender, locale]);
+
+    useLayoutEffect(() => {
         if (canvasRender) {
             canvasRender.progState.pageLayout = layout;
             canvasRender.markDirty();
@@ -198,8 +209,8 @@ export function LayerView() {
             ref={setCanvasEl}
         />
         {canvasRender && !canvasRender.progState.render && <div className='absolute flex flex-col items-center w-full h-full justify-center'>
-            <div className='text-2xl'>This application requires a WebGL2 capable browser.</div>
-            <div className='text-lg mt-2'>Please try the latest version of Chrome or Firefox.</div>
+            <div className='text-2xl'>{t('webgl.required')}</div>
+            <div className='text-lg mt-2'>{t('webgl.suggestion')}</div>
         </div>}
         {/* <div className={s.cursorFollow} style={{ top: pointPos.y, left: pointPos.x }} /> */}
         {canvasRender && <ProgramStateContext.Provider value={canvasRender.progState}>
@@ -247,6 +258,11 @@ class CanvasRender {
 
     destroy() {
         this.stopped = true;
+    }
+
+    setLocale(locale: Locale) {
+        setWalkthroughLocale(this.progState.walkthrough, locale);
+        this.markDirty();
     }
 
     setData(data: ICanvasData) {

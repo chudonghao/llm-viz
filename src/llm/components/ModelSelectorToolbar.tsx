@@ -5,9 +5,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExpand, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { Vec3 } from '@/src/utils/vector';
 import { Mat4f } from '@/src/utils/matrix';
+import { useI18n } from '../i18n/LanguageProvider';
 
 export const ModelSelectorToolbar: React.FC<{
 }> = () => {
+    const { t } = useI18n();
     let progState = useProgramState();
 
     function makeButton(egIndex: number) {
@@ -26,9 +28,9 @@ export const ModelSelectorToolbar: React.FC<{
             progState.markDirty();
         }
 
-        return <div className={clsx('m-2 px-2 py-1 rounded shadow cursor-pointer hover:bg-blue-300', isActive ? 'bg-blue-200' : 'bg-white')} onClick={handleClick}>
+        return <button type="button" aria-pressed={isActive} className={clsx('m-2 px-2 py-1 rounded shadow cursor-pointer hover:bg-blue-300', isActive ? 'bg-blue-200' : 'bg-white')} onClick={handleClick}>
             {example.name}
-        </div>;
+        </button>;
     }
 
     function onExpandClick() {
@@ -66,12 +68,12 @@ export const ModelSelectorToolbar: React.FC<{
             {makeButton(2)}
         </div>
         <div className='ml-2 flex flex-row'>
-            <div className={clsx('m-2 p-2 bg-white min-w-[2rem] flex justify-center rounded shadow cursor-pointer hover:bg-blue-300')} onClick={onExpandClick}>
+            <button type="button" title={t('controls.showModel')} aria-label={t('controls.showModel')} className={clsx('m-2 p-2 bg-white min-w-[2rem] flex justify-center rounded shadow cursor-pointer hover:bg-blue-300')} onClick={onExpandClick}>
                 <FontAwesomeIcon icon={faExpand} />
-            </div>
-            <div className={clsx('m-2 p-2 bg-white min-w-[2rem] flex justify-center rounded shadow cursor-pointer hover:bg-blue-300')} onClick={onMagnifyClick}>
+            </button>
+            <button type="button" title={t('controls.focusInput')} aria-label={t('controls.focusInput')} className={clsx('m-2 p-2 bg-white min-w-[2rem] flex justify-center rounded shadow cursor-pointer hover:bg-blue-300')} onClick={onMagnifyClick}>
                 <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </div>
+            </button>
         </div>
     </div>;
 

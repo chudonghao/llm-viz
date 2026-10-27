@@ -19,6 +19,8 @@ import { walkthrough06_Projection } from "./Walkthrough06_Projection";
 import { walkthrough07_Mlp } from "./Walkthrough07_Mlp";
 import { walkthrough08_Transformer } from "./Walkthrough08_Transformer";
 import { walkthrough09_Output } from "./Walkthrough09_Output";
+import type { Locale } from '../i18n/locale';
+import { translate, type MessageKey } from '../i18n/messages';
 
 
 /**
@@ -67,6 +69,7 @@ export type IWalkthrough = ReturnType<typeof initWalkthrough>;
 
 export function initWalkthrough() {
     return {
+        locale: 'en' as Locale,
         phase: SavedState.state?.phase ?? Phase.Intro_Intro,
         time: SavedState.state?.phaseTime ?? 0,
         viewDt: 0,
@@ -138,6 +141,30 @@ export enum Phase {
 
 export function phaseToGroup(wt: IWalkthrough) {
     return wt.phaseList.find(g => g.phases.find(p => p.id === wt.phase))!;
+}
+
+const chapterTitleKeys: Partial<Record<Phase, MessageKey>> = {
+    [Phase.Intro_Intro]: 'chapter.overview',
+    [Phase.Intro_Prelim]: 'chapter.preliminaries',
+    [Phase.Input_Detail_Embedding]: 'chapter.embedding',
+    [Phase.Input_Detail_LayerNorm]: 'chapter.layerNorm',
+    [Phase.Input_Detail_SelfAttention]: 'chapter.selfAttention',
+    [Phase.Input_Detail_Projection]: 'chapter.projection',
+    [Phase.Input_Detail_Mlp]: 'chapter.mlp',
+    [Phase.Input_Detail_Transformer]: 'chapter.transformer',
+    [Phase.Input_Detail_Softmax]: 'chapter.softmax',
+    [Phase.Input_Detail_Output]: 'chapter.output',
+};
+
+export function setWalkthroughLocale(wt: IWalkthrough, locale: Locale) {
+    wt.locale = locale;
+    for (const group of wt.phaseList) {
+        group.title = translate(locale, group.groupId === PhaseGroup.Intro ? 'toc.introduction' : 'toc.components');
+        for (const phase of group.phases) {
+            const key = chapterTitleKeys[phase.id];
+            if (key) phase.title = translate(locale, key);
+        }
+    }
 }
 
 

@@ -5,6 +5,7 @@ let withBundleAnalyzer = require("@next/bundle-analyzer")({
 });
 
 const nextConfig = {
+  agentRules: false,
   reactStrictMode: false,
   productionBrowserSourceMaps: true,
   // Always static HTML export for Cloudflare Pages / any static host.

@@ -91,9 +91,20 @@
 }
 
 .chapterTitle {
-    flex: 1 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 1.1rem;
     text-align: center;
+}
+
+.walkthroughText:lang(zh-CN) {
+    line-height: 1.7;
+    text-align: start;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.key {
+    margin-inline: 0.25em;
 }
 
 .controls {

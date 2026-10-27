@@ -12,6 +12,8 @@ import clsx from 'clsx';
 import { TocDiagram } from './components/TocDiagram';
 import { BlockText, DimensionText } from './components/CommentaryHelpers';
 import { useRequestAnimationFrame } from '../utils/hooks';
+import { useI18n } from './i18n/LanguageProvider';
+import { translate, type MessageKey } from './i18n/messages';
 
 export function jumpToPhase(wt: IWalkthrough, phaseId: Phase) {
     wt.time = 0;
@@ -47,12 +49,16 @@ export function jumpPhase(wt: IWalkthrough, phaseDelta: number) {
 }
 
 export const Commentary: React.FC = () => {
+    const { t } = useI18n();
     let progState = useProgramState();
     let [parasEl, setParasEl] = React.useState<HTMLDivElement | null>(null);
     // let [rangeInfo, setRangeInfo] = React.useState<{ start: number, end: number, width: number }>({ start: 0, end: 0, width: 1 });
     let wt = progState.walkthrough;
 
     function handleKeyDown(ev: React.KeyboardEvent) {
+        if (ev.target instanceof Element && ev.target.closest('input, select, textarea, button, a, [contenteditable="true"]')) {
+            return;
+        }
         if (ev.key === ' ') {
             ev.preventDefault(); // prevent scrolling
         }
@@ -258,11 +264,11 @@ export const Commentary: React.FC = () => {
 
     return <>
         <div className={s.chapterControls}>
-            <button className={clsx(s.btn, s.prevNextBtn)} onClick={() => handlePhaseDeltaClick(-1)}>
+            <button aria-label={t('controls.previousChapter')} className={clsx(s.btn, s.prevNextBtn)} onClick={() => handlePhaseDeltaClick(-1)}>
                 <FontAwesomeIcon icon={faChevronLeft} />
             </button>
-            <div className={s.chapterTitle}>Chapter: {phase.title}</div>
-            <button className={clsx(s.btn, s.prevNextBtn)} onClick={() => handlePhaseDeltaClick(1)}>
+            <div className={s.chapterTitle}>{t('chapter.prefix')}{phase.title}</div>
+            <button aria-label={t('controls.nextChapter')} className={clsx(s.btn, s.prevNextBtn)} onClick={() => handlePhaseDeltaClick(1)}>
                 <FontAwesomeIcon icon={faChevronRight} />
             </button>
         </div>
@@ -284,10 +290,10 @@ export const Commentary: React.FC = () => {
         </div>
         <div className={s.controls}>
             <button className={clsx(s.btn, "flex-[2] bg-blue-300 border border-blue-600 hover:bg-blue-400")} onClick={handleContinueClick}>
-                <div>Continue</div>
+                <div>{t(wt.running ? 'controls.pause' : 'controls.continue')}</div>
             </button>
             <button className={clsx(s.btn, "ml-4 min-w-[100px] bg-white border border-blue-600 hover:bg-blue-200")} onClick={handleAdvanceClick}>
-                <div>Skip</div>
+                <div>{t('controls.skip')}</div>
             </button>
         </div>
     </>;
@@ -302,6 +308,7 @@ interface INode {
 }
 
 export function walkthroughToParagraphs(wt: IWalkthrough, nodes: INode[]) {
+    const t = (key: MessageKey) => translate(wt.locale, key);
 
     function genCommentary(c: ICommentary, t: number) {
 
@@ -371,7 +378,7 @@ export function walkthroughToParagraphs(wt: IWalkthrough, nodes: INode[]) {
                 let displayFactor = c.duration === 0 ? (wt.time >= c.start ? 1 : 0) : clamp((wt.time - c.start) / c.duration, 0, 1);
                 let opacity = lerp(0.6, 1, displayFactor);
                 let blur = lerp(0, 0, displayFactor);
-                return <div key={i} style={{ opacity, filter: `blur(${blur}px)` }} data-nid={i}>
+                return <div key={i} lang={c.locale ?? 'en'} style={{ opacity, filter: `blur(${blur}px)` }} data-nid={i}>
                     {genCommentary(c, wt.time)}
                 </div>;
             } else {
@@ -404,10 +411,10 @@ export function walkthroughToParagraphs(wt: IWalkthrough, nodes: INode[]) {
 
                 return <div key={i} className={s.commentaryBreak} data-nid={i} style={{ opacity, filter: `blur(${blur}px)` }}>
                     {showLine && <>
-                        <button className={clsx(s.jump, 'btn')} onClick={handleArrowTo}>
+                        <button type="button" aria-label={t('controls.jump')} className={clsx(s.jump, 'btn')} onClick={handleArrowTo}>
                             <FontAwesomeIcon icon={faArrowDown} />
                         </button>
-                        <button className={clsx(s.playPause, 'btn')} onClick={handlePlayPause}>
+                        <button type="button" aria-label={t(wt.running && inRange ? 'controls.pause' : 'controls.play')} className={clsx(s.playPause, 'btn')} onClick={handlePlayPause}>
                             <FontAwesomeIcon icon={wt.running && inRange ? faPause : faPlay} />
                         </button>
                         <PhaseTimelineHoriz times={n.times!} />
@@ -521,11 +528,12 @@ const SpaceToContinueHint: React.FC<{
     top: number;
     onClick: React.MouseEventHandler,
 }> = ({ top, onClick }) => {
+    const { t } = useI18n();
 
     return <div className={"absolute flex justify-center pointer-events-none top-0 left-0 right-0"} style={{ top, transform: `translateY(20px)` }}>
-        <div className={"flex-shrink py-2 px-4 bg-blue-200 shadow-md rounded-3xl pointer-events-auto text-black cursor-pointer"} onClick={onClick}>
-             Press <span className={s.key}>Space</span> to continue
-        </div>
+        <button type="button" className={"flex-shrink py-2 px-4 bg-blue-200 shadow-md rounded-3xl pointer-events-auto text-black cursor-pointer"} onClick={onClick}>
+            {t('hint.before')}<span className={s.key}>{t('hint.space')}</span>{t('hint.after')}
+        </button>
     </div>;
 }
 

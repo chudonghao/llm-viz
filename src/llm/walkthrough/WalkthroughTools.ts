@@ -6,6 +6,8 @@ import { Vec3, Vec4 } from "@/src/utils/vector";
 import { IWalkthrough, Phase, PhaseGroup } from "./Walkthrough";
 import { IProgramState } from "../Program";
 import { ICameraPos } from "../Camera";
+import { interpolate, translate, type MessageKey } from '../i18n/messages';
+import type { Locale } from '../i18n/locale';
 
 export interface IWalkthroughArgs {
     state: IProgramState;
@@ -107,8 +109,10 @@ export function eventEndTime(evt: ITimeInfo) {
 }
 
 export interface ICommentary extends ITimeInfo {
-    strings: TemplateStringsArray;
+    strings: readonly string[];
     values: any[];
+    /** Untranslated tagged templates are English. */
+    locale?: Locale;
 }
 
 export function isCommentary(evt: ITimeInfo): evt is ICommentary {
@@ -116,7 +120,7 @@ export function isCommentary(evt: ITimeInfo): evt is ICommentary {
 }
 
 export function commentary(wt: IWalkthrough, prev?: ITimeInfo | null, duration?: number) {
-    return (stringsArr: TemplateStringsArray, ...values: any[]): ICommentary => {
+    return (stringsArr: readonly string[], ...values: any[]): ICommentary => {
         let t = 0;
         prev = prev ?? wt.times[wt.times.length - 1];
 
@@ -136,6 +140,13 @@ export function commentary(wt: IWalkthrough, prev?: ITimeInfo | null, duration?:
 
         return res;
     }
+}
+
+export function localizedCommentary(wt: IWalkthrough, key: MessageKey, slots: Record<string, unknown> = {}, prev?: ITimeInfo | null, duration?: number) {
+    const { strings, values } = interpolate(translate(wt.locale, key), slots);
+    const result = commentary(wt, prev, duration)(strings, ...values);
+    result.locale = wt.locale;
+    return result;
 }
 
 export function writeCommentary(state: IProgramState, prev: ICommentaryRes | null, stringsArrRaw: TemplateStringsArray, ...values: any[]): ICommentaryRes {

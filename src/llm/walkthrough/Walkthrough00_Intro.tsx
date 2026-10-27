@@ -1,5 +1,5 @@
 import { IWalkthrough, Phase } from "./Walkthrough";
-import { Colors, commentary, DimStyle, dimStyleColor, embed, ITimeInfo, IWalkthroughArgs, moveCameraTo, phaseTools, setInitialCamera } from "./WalkthroughTools";
+import { Colors, localizedCommentary, DimStyle, dimStyleColor, embed, ITimeInfo, IWalkthroughArgs, moveCameraTo, phaseTools, setInitialCamera } from "./WalkthroughTools";
 import s from './Walkthrough.module.scss';
 import { Dim, Vec3, Vec4 } from "@/src/utils/vector";
 import { clamp, makeArray } from "@/src/utils/data";
@@ -12,6 +12,8 @@ import { IProgramState } from "../Program";
 import { lerp } from "@/src/utils/math";
 import { drawDependences } from "../Interaction";
 import { drawDataFlow } from "../components/DataFlow";
+import { translate } from '../i18n/messages';
+import { useI18n } from '../i18n/LanguageProvider';
 
 /*
 We're mostly on the right track here I think.
@@ -58,10 +60,7 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
 
     setInitialCamera(state, new Vec3(184.744, 0.000, -636.820), new Vec3(296.000, 16.000, 13.500));
 
-    let c0 = commentary(wt, null, 0)`Welcome to the walkthrough of the GPT large language model! Here we'll explore the model _nano-gpt_, with a mere 85,000 parameters.
-
-Its goal is a simple one: take a sequence of six letters: ${embed(ExampleInputOutput)}
-and sort them in alphabetical order, i.e. to "ABBBCC".`;
+    let c0 = localizedCommentary(wt, 'intro.welcome', { input: embed(ExampleInputOutput) }, null, 0);
 
     if (c0.t > 0) {
         for (let cube of layout.cubes) {
@@ -93,12 +92,15 @@ and sort them in alphabetical order, i.e. to "ABBBCC".`;
 
     breakAfter();
 
-    let tokenStr = c_str('_token_', 0, DimStyle.Token);
-    let tokenIdxStr = c_str('_token index_', 0, DimStyle.TokenIdx);
+    let tokenStr = c_str(translate(wt.locale, 'intro.tokenTerm'), 0, DimStyle.Token);
+    let tokenIdxStr = c_str(translate(wt.locale, 'intro.tokenIndexTerm'), 0, DimStyle.TokenIdx);
 
-    commentary(wt, t6)`We call each of these letters a ${tokenStr}, and the set of the model's different tokens make up its _vocabulary_:${embed(TokenVocab)}
-
-    From this table, each token is assigned a number, its ${tokenIdxStr}. And now we can enter this sequence of numbers into the model:${embed(ExampleTokenValues)}\n`;
+    localizedCommentary(wt, 'intro.tokenization', {
+        token: tokenStr,
+        vocabulary: embed(TokenVocab),
+        tokenIndex: tokenIdxStr,
+        indices: embed(ExampleTokenValues),
+    }, t6);
     breakAfter();
 
     let t7 = afterTime(null, 1.5, 0.5);
@@ -129,8 +131,7 @@ and sort them in alphabetical order, i.e. to "ABBBCC".`;
 
     breakAfter();
 
-    let c5 = commentary(wt)`In the 3d view, each green cell represents a number being processed, and each blue cell is a weight. ${embed(GreenBlueCells)}
-    Each number in the sequence first gets turned into a 48 element vector (a size chosen for this particular model). This is called an _embedding_.`;
+    let c5 = localizedCommentary(wt, 'intro.embeddings', { cells: embed(GreenBlueCells) });
     breakAfter(c5);
 
     {
@@ -166,7 +167,7 @@ and sort them in alphabetical order, i.e. to "ABBBCC".`;
     }
 
     breakAfter();
-    commentary(wt)`The embedding is then passed through the model, going through a series of layers, called transformers, before reaching the bottom.`;
+    localizedCommentary(wt, 'intro.layers');
     breakAfter();
 
     {
@@ -220,11 +221,8 @@ and sort them in alphabetical order, i.e. to "ABBBCC".`;
         }
     }
 
-    commentary(wt)`So what's the output? A prediction of the next token in the sequence. So at the 6th entry, we get probabilities that the next token is
-        going to be 'A', 'B', or 'C'.`
-
-    commentary(wt)`In this case, the model is pretty sure it's going to be 'A'. Now, we can feed this prediction back into the top of the model, and repeat
-    the entire process.`;
+    localizedCommentary(wt, 'intro.output');
+    localizedCommentary(wt, 'intro.repeat');
 
     breakAfter();
 }
@@ -388,15 +386,16 @@ const ExampleTokenValues: React.FC = () => {
 };
 
 const TokenVocab: React.FC = () => {
+    const { t } = useI18n();
 
     return <div className={s.tableWrap}>
         <table className={s.table}>
             <tbody>
                 <tr className={s.tokString} style={{ color: dimStyleColor(DimStyle.Token).toHexColor() }}>
-                    <th>token</th><td>A</td><td>B</td><td>C</td>
+                    <th>{t('intro.table.token')}</th><td>A</td><td>B</td><td>C</td>
                 </tr>
                 <tr className={s.tokIndex} style={{ color: dimStyleColor(DimStyle.TokenIdx).toHexColor() }}>
-                    <th>index</th><td>0</td><td>1</td><td>2</td>
+                    <th>{t('intro.table.index')}</th><td>0</td><td>1</td><td>2</td>
                 </tr>
             </tbody>
         </table>
@@ -404,6 +403,7 @@ const TokenVocab: React.FC = () => {
 };
 
 const GreenBlueCells: React.FC = () => {
+    const { t } = useI18n();
 
     let [blueNums, setBlueNums] = useState([-0.7, 0.7, -0.1]);
     let [greenNums, setGreenNums] = useState([-0.7, 0.4, 0.8]);
@@ -416,12 +416,12 @@ const GreenBlueCells: React.FC = () => {
             <div className={s.cellInfoCol}>
                 <Cell nums={greenNums} color={greenColor} mul={0.5} />
                 <Graph nums={greenNums} color={greenColor} setNums={setGreenNums} />
-                <div className={s.cellInfoText}>being processed</div>
+                <div className={s.cellInfoText}>{t('intro.cells.processing')}</div>
             </div>
             <div className={s.cellInfoCol}>
                 <Cell nums={blueNums} color={blueColor} mul={1} />
                 <Graph nums={blueNums} color={blueColor} setNums={setBlueNums} />
-                <div className={s.cellInfoText}>weights</div>
+                <div className={s.cellInfoText}>{t('intro.cells.weights')}</div>
             </div>
         </div>
     </div>

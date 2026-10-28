@@ -368,8 +368,7 @@ Let's track one of those vectors:
 `,
 
     'mlp.expansion': `
-We first run through the matrix-vector multiplication with bias added, expanding the vector to length {expandedChannels}. (Note that the output matrix is transposed here.
-This is purely for vizualization purposes.)
+We first run through the matrix-vector multiplication with bias added, expanding the vector to length {expandedChannels}. Each token remains a column, with channels running from top to bottom.
 `,
 
     'mlp.activation': `
@@ -780,7 +779,7 @@ MLP 会独立处理每个长度为 {channels} 的列向量，依次执行：
 
 接下来，跟踪其中一个向量的计算过程：`,
 
-    'mlp.expansion': '首先，进行矩阵与向量的乘法，再加上偏置，把向量长度扩展为 {expandedChannels}。为了便于展示，图中的输出矩阵采用转置后的布局。',
+    'mlp.expansion': '首先，进行矩阵与向量的乘法，再加上偏置，把向量长度扩展为 {expandedChannels}。每个 token 始终对应一列，通道从上到下排列。',
     'mlp.activation': `接下来，对向量中的每个元素应用 GELU _激活函数（activation function）_，为模型引入_非线性（non-linearity）_。这是神经网络中的关键环节。这里使用的 GELU 与 ReLU（计算式为 {reluFormula}）形状相似，但 GELU 的曲线平滑，没有 ReLU 那样的尖锐转折。
 
 {activationGraph}`,

@@ -29,14 +29,14 @@ export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout, lo
     for (let block of layout.blocks) {
         let blockTop = block.ln1.lnResid.y - layout.margin / 2;
         let blockBottom = block.mlpResult.y + block.mlpResult.dy + layout.margin / 2;
-        let mlpLeft = block.mlpProjBias.x - layout.margin * 3;
+        let mlpLeft = Math.min(...block.mlpLabel.cubes.map(c => c.x)) - layout.margin * 3;
         let headLeft = block.projBias.x - layout.margin;
         let attnLabelLeft = headLeft - layout.margin * 3;
         let attnLeft = lerp(headLeft, mlpLeft, 0.6);
 
         let attnProjTop = block.attnOut.y - layout.margin / 2;
         let attnProjBot = block.attnOut.y + block.attnOut.dy + layout.margin / 2;
-        let mlpTop = block.mlpFcBias.y - layout.margin / 2;
+        let mlpTop = Math.min(...block.mlpLabel.cubes.map(c => c.y)) - layout.margin / 2;
 
         let blockLeft = mlpLeft - layout.margin * 6;
 

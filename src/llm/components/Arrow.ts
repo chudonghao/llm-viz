@@ -92,15 +92,15 @@ export function drawAllArrows(state: IRenderState, layout: IGptModelLayout) {
         drawHorizArrow(block.ln2.lnSigma, block.ln2.lnResid);
 
         drawArrowResidSplit(block.attnResidual, block.ln2.lnResid);
-        drawArrowBetween(block.ln2.lnResid, BlockPos.Bot, block.mlpFc, BlockPos.Right);
+        drawVertArrow(block.ln2.lnResid, block.mlpFc);
 
-        drawVertArrow(block.mlpFcBias, block.mlpFcWeight);
-        drawVertArrow(block.mlpFcWeight, block.mlpFc, 12);
-        drawVertArrow(block.mlpFc, block.mlpAct, 12);
+        drawHorizArrow(block.mlpFcBias, block.mlpFcWeight);
+        drawHorizArrow(block.mlpFcWeight, block.mlpFc, 12);
+        drawHorizArrow(block.mlpFc, block.mlpAct, 12);
         drawHorizArrow(block.mlpProjBias, block.mlpProjWeight);
         drawHorizArrow(block.mlpProjWeight, block.mlpResult);
         drawHorizArrow(block.mlpResult, block.mlpResidual);
-        drawArrowBetween(block.mlpAct, BlockPos.Right, block.mlpResult, BlockPos.Top);
+        drawVertArrow(block.mlpAct, block.mlpResult);
 
         prevResid = block.mlpResidual;
     }

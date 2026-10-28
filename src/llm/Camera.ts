@@ -1,4 +1,4 @@
-import { IModelLayout } from "./GptModelLayout";
+import { IBlkDef, IModelLayout } from "./GptModelLayout";
 import { IProgramState } from "./Program";
 import { Mat4f } from "@/src/utils/matrix";
 import { BoundingBox3d, Vec3 } from "@/src/utils/vector";
@@ -44,7 +44,7 @@ export interface ICameraPos {
 }
 
 
-export function cameraToMatrixView(camera: ICamera) {
+export function cameraToMatrixView(camera: ICameraPos) {
     while (camera.angle.x < 0) camera.angle.x += 360;
     while (camera.angle.x > 360) camera.angle.x -= 360;
 
@@ -64,6 +64,33 @@ export function cameraToMatrixView(camera: ICamera) {
         lookAt: Mat4f.fromLookAt(camPos, camLookat, new Vec3(0, 0, 1)),
         camPos,
     };
+}
+
+// Fit model-space bounds using the same orientation, field of view and near plane as the renderer.
+export function cameraForBlocks(blocks: IBlkDef[], viewport: Vec3, angle: Vec3, padding: number = 1.2, offset: Vec3 = Vec3.zero): ICameraPos {
+    const bounds = new BoundingBox3d();
+    for (const block of blocks) {
+        bounds.addInPlace(new Vec3(block.x, block.y, block.z).add(offset));
+        bounds.addInPlace(new Vec3(block.x + block.dx, block.y + block.dy, block.z + block.dz).add(offset));
+    }
+    const mid = bounds.center();
+    const center = new Vec3(mid.x, -mid.z, -mid.y);
+    const view = cameraToMatrixView({ center, angle: new Vec3(angle.x, angle.y, 1) }).lookAt;
+    const tanHalfFov = Math.tan(20 * Math.PI / 180);
+    const aspect = Math.max(1, viewport.x) / Math.max(1, viewport.y);
+    let distance = 100;
+    for (const x of [bounds.min.x, bounds.max.x]) {
+        for (const y of [bounds.min.y, bounds.max.y]) {
+            for (const z of [bounds.min.z, bounds.max.z]) {
+                const corner = view.mulVec3Affine(new Vec3(x, -z, -y));
+                const depth = corner.z + 200; // Remove the reference camera's distance.
+                distance = Math.max(distance, depth + 101,
+                    depth + Math.abs(corner.x) * padding / (tanHalfFov * aspect),
+                    depth + Math.abs(corner.y) * padding / tanHalfFov);
+            }
+        }
+    }
+    return { center, angle: new Vec3(angle.x, angle.y, distance / 200) };
 }
 
 export function genModelViewMatrices(state: IProgramState, layout: IModelLayout, modelOffset: Vec3 = Vec3.zero) {

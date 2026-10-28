@@ -6,11 +6,21 @@ import { faExpand, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { Vec3 } from '@/src/utils/vector';
 import { Mat4f } from '@/src/utils/matrix';
 import { useI18n } from '../i18n/LanguageProvider';
+import { cameraForBlocks } from '../Camera';
+import { genGptModelLayout } from '../GptModelLayout';
 
 export const ModelSelectorToolbar: React.FC<{
 }> = () => {
     const { t } = useI18n();
     let progState = useProgramState();
+
+    function showModel(egIndex: number) {
+        const example = progState.examples[egIndex] ?? progState.mainExample;
+        const layout = egIndex === -1 ? progState.layout : (example.layout ??= genGptModelLayout(example.shape));
+        progState.camera.desiredCamera = cameraForBlocks(layout.cubes, progState.render.size,
+            example.camera?.angle ?? progState.camera.angle, 1.2, example.offset);
+        progState.markDirty();
+    }
 
     function makeButton(egIndex: number) {
 
@@ -24,8 +34,7 @@ export const ModelSelectorToolbar: React.FC<{
                 example.enabled = true;
             }
             progState.currExampleId = egIndex;
-            progState.camera.desiredCamera = example.camera;
-            progState.markDirty();
+            showModel(egIndex);
         }
 
         return <button type="button" aria-pressed={isActive} className={clsx('m-2 px-2 py-1 rounded shadow cursor-pointer hover:bg-blue-300', isActive ? 'bg-blue-200' : 'bg-white')} onClick={handleClick}>
@@ -34,9 +43,7 @@ export const ModelSelectorToolbar: React.FC<{
     }
 
     function onExpandClick() {
-        let example = progState.examples[progState.currExampleId] ?? progState.mainExample;
-        progState.camera.desiredCamera = example.camera;
-        progState.markDirty();
+        showModel(progState.currExampleId);
     }
 
     function onMagnifyClick() {

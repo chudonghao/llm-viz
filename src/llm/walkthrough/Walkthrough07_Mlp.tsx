@@ -2,13 +2,14 @@ import React from "react";
 import { Dim, Vec3 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
 import { embed, localizedCommentary, DimStyle, dimStyleColor, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
-import { dimProps, findSubBlocks, splitGrid } from "../Annotations";
+import { findSubBlocks, splitGrid } from "../Annotations";
 import { lerp } from "@/src/utils/math";
-import { IBlkDef, getBlkDimensions } from "../GptModelLayout";
+import { IBlkDef } from "../GptModelLayout";
+import { cameraForBlocks } from "../Camera";
 import { processUpTo, startProcessBefore } from "./Walkthrough00_Intro";
 import { drawDataFlow } from "../components/DataFlow";
 import { drawDependences } from "../Interaction";
-import { makeArray, makeArrayRange } from "@/src/utils/data";
+import { makeArrayRange } from "@/src/utils/data";
 import { translate, type MessageKey } from '../i18n/messages';
 
 export function walkthrough07_Mlp(args: IWalkthroughArgs) {
@@ -22,7 +23,8 @@ export function walkthrough07_Mlp(args: IWalkthroughArgs) {
 
     let block = layout.blocks[0];
 
-    setInitialCamera(state, new Vec3(-154.755, 0.000, -460.042), new Vec3(289.100, -8.900, 2.298));
+    const camera = cameraForBlocks([block.attnResidual, ...block.mlpLabel.cubes], state.render.size, new Vec3(289.1, -8.9), 1.3);
+    setInitialCamera(state, camera.center, camera.angle);
     wt.dimHighlightBlocks = [block.ln2.lnResid, block.mlpAct, block.mlpFc, block.mlpFcBias, block.mlpFcWeight, block.mlpProjBias, block.mlpProjWeight, block.mlpResult, block.mlpResidual];
 
     localizedCommentary(wt, 'mlp.introduction', {
@@ -94,7 +96,7 @@ export function walkthrough07_Mlp(args: IWalkthroughArgs) {
     let mlpRes = block.mlpResult;
     let mlpResid = block.mlpResidual;
 
-    function dimExceptVector(blk: IBlkDef, axis: Dim, disable: boolean) {
+    function dimExceptVector(blk: IBlkDef, disable: boolean) {
         if (t0_fadeOut.t === 0 || t6_processAll.t > 0) {
             return;
         }
@@ -103,7 +105,7 @@ export function walkthrough07_Mlp(args: IWalkthroughArgs) {
             blk.access!.disable = true;
         }
 
-        let col = splitGrid(layout, blk, axis, targetIdx + 0.5, lerp(0.0, 1.0, t0_fadeOut.t))!;
+        let col = splitGrid(layout, blk, Dim.X, targetIdx + 0.5, lerp(0.0, 1.0, t0_fadeOut.t))!;
 
         for (let sub of blk.subs!) {
             sub.opacity = lerp(1.0, 0.2, t0_fadeOut.t);
@@ -114,44 +116,40 @@ export function walkthrough07_Mlp(args: IWalkthroughArgs) {
         return col!;
     }
 
-    dimExceptVector(inputBlk, Dim.X, false);
-    let mlp1Col = dimExceptVector(mlp1Blk, Dim.Y, true);
-    let mlp2Col = dimExceptVector(mlp2Blk, Dim.Y, true);
-    let mlpResCol = dimExceptVector(mlpRes, Dim.X, true);
-    let mplResIdCol = dimExceptVector(mlpResid, Dim.X, true);
+    dimExceptVector(inputBlk, false);
+    let mlp1Col = dimExceptVector(mlp1Blk, true);
+    let mlp2Col = dimExceptVector(mlp2Blk, true);
+    let mlpResCol = dimExceptVector(mlpRes, true);
+    const mlpResidCol = dimExceptVector(mlpResid, true);
 
-    function processVector(blk: IBlkDef, col: IBlkDef | undefined, t: number, pinIdx: Vec3) {
+    function processVector(blk: IBlkDef, col: IBlkDef | undefined, t: number) {
         if (t === 0) {
             return;
         }
+        if (t >= 1) {
+            if (col) col.access!.disable = false;
+            return;
+        }
 
-        let dim0 = blk.transpose ? Dim.Y : Dim.X;
-        let dim1 = blk.transpose ? Dim.X : Dim.Y;
-        let { cx: numCells } = dimProps(blk, dim1);
-
-        let xPos = Math.floor(lerp(0, numCells, t));
-
-        let destIdx = new Vec3().setAt(dim0, targetIdx).setAt(dim1, xPos).round_();
+        const channel = Math.min(blk.cy - 1, Math.floor(lerp(0, blk.cy, t)));
+        const destIdx = new Vec3(targetIdx, channel);
 
         if (col) {
-            let row = splitGrid(layout, col, dim1, xPos, 0.0);
-            for (let a of findSubBlocks(col, dim1, 0, xPos)) {
+            splitGrid(layout, col, Dim.Y, channel, 0.0);
+            for (let a of findSubBlocks(col, Dim.Y, 0, channel)) {
                 a.access!.disable = false;
             }
         }
 
-        if (t < 1.0) {
-            drawDataFlow(state, blk, destIdx, pinIdx);
-            drawDependences(state, blk, destIdx);
-        } else if (col) {
-            col!.access!.disable = false;
-        }
+        // Keep the calculation above its output column as the scan moves downwards.
+        drawDataFlow(state, blk, destIdx, new Vec3(blk.cx / 2, -layout.margin / layout.cell));
+        drawDependences(state, blk, destIdx);
     }
 
-    processVector(mlp1Blk, mlp1Col, t1_process.t, new Vec3(40));
-    processVector(mlp2Blk, mlp2Col, t2_process.t, new Vec3(mlp1Blk.cx / 2, -15));
-    processVector(mlpRes, mlpResCol, t3_process.t, new Vec3(mlpRes.cx / 2, -15));
-    processVector(mlpResid, mplResIdCol, t4_process.t, new Vec3(mlpRes.cx / 2, -15));
+    processVector(mlp1Blk, mlp1Col, t1_process.t);
+    processVector(mlp2Blk, mlp2Col, t2_process.t);
+    processVector(mlpRes, mlpResCol, t3_process.t);
+    processVector(mlpResid, mlpResidCol, t4_process.t);
 
     if (t5_cleanup.t > 0.4) {
         mlp1Blk.access!.disable = true;

@@ -1,6 +1,7 @@
 import { Vec3 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
 import { localizedCommentary, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
+import { cameraForBlocks } from "../Camera";
 
 export function walkthrough05_Softmax(args: IWalkthroughArgs) {
     let { walkthrough: wt, state } = args;
@@ -9,7 +10,9 @@ export function walkthrough05_Softmax(args: IWalkthroughArgs) {
         return;
     }
 
-    setInitialCamera(state, new Vec3(-24.350, 0.000, -1702.195), new Vec3(283.100, 0.600, 1.556));
+    const { logits, logitsAgg1, logitsAgg2, logitsSoftmax } = state.layout;
+    const camera = cameraForBlocks([logits, logitsAgg1, logitsAgg2, logitsSoftmax], state.render.size, new Vec3(283.1, 0.6));
+    setInitialCamera(state, camera.center, camera.angle);
 
     localizedCommentary(wt, 'softmax.explanation', {}, null, 0);
 }

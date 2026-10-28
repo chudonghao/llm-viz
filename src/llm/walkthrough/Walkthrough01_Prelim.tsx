@@ -3,6 +3,7 @@ import { Phase } from "./Walkthrough";
 import { localizedCommentary, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
 import s from './Walkthrough.module.scss';
 import { Vec3 } from '@/src/utils/vector';
+import { cameraForBlocks } from "../Camera";
 
 let minGptLink = 'https://github.com/karpathy/minGPT';
 let pytorchLink = 'https://pytorch.org/';
@@ -16,7 +17,8 @@ export function walkthrough01_Prelim(args: IWalkthroughArgs) {
         return;
     }
 
-    setInitialCamera(state, new Vec3(184.744, 0.000, -636.820), new Vec3(296.000, 16.000, 13.500));
+    const camera = cameraForBlocks(state.layout.cubes, state.render.size, new Vec3(296, 16));
+    setInitialCamera(state, camera.center, camera.angle);
 
     localizedCommentary(wt, 'prelim.body', {
         minGpt: embedLink('minGPT', minGptLink),

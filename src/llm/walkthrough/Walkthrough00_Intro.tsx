@@ -14,6 +14,7 @@ import { drawDependences } from "../Interaction";
 import { drawDataFlow } from "../components/DataFlow";
 import { translate } from '../i18n/messages';
 import { useI18n } from '../i18n/LanguageProvider';
+import { cameraForBlocks } from "../Camera";
 
 /*
 We're mostly on the right track here I think.
@@ -58,7 +59,8 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
         return;
     }
 
-    setInitialCamera(state, new Vec3(184.744, 0.000, -636.820), new Vec3(296.000, 16.000, 13.500));
+    const initialCamera = cameraForBlocks(layout.cubes, state.render.size, new Vec3(296, 16));
+    setInitialCamera(state, initialCamera.center, initialCamera.angle);
 
     let c0 = localizedCommentary(wt, 'intro.welcome', { input: embed(ExampleInputOutput) }, null, 0);
 
@@ -179,7 +181,8 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
         let processState = processUpTo(state, t_firstResidWalk, layout.blocks[0].attnResidual);
 
         let t_firstTransformer = afterTime(null, 1.0, 0.5);
-        moveCameraTo(state, t_firstTransformer, new Vec3(-78.7, 0, -274.2), new Vec3(299.4, 14.7, 4.3));
+        const transformerCamera = cameraForBlocks(layout.blocks[0].cubes, state.render.size, new Vec3(299.4, 14.7), 1.3);
+        moveCameraTo(state, t_firstTransformer, transformerCamera.center, transformerCamera.angle);
         let t_firstTransformerWalk = afterTime(null, 3.5, 0.5);
         processUpTo(state, t_firstTransformerWalk, layout.blocks[0].mlpResidual, processState);
 
@@ -188,19 +191,15 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
         }
 
         let t_fullFrame = afterTime(null, 1.0, 0.5);
-        moveCameraTo(state, t_fullFrame, new Vec3(-147, 0, -744.1), new Vec3(298.5, 23.4, 12.2));
+        const fullCamera = cameraForBlocks(layout.cubes, state.render.size, new Vec3(298.5, 23.4));
+        moveCameraTo(state, t_fullFrame, fullCamera.center, fullCamera.angle);
         let t_fullFrameWalk = afterTime(null, 5.0, 0.5);
         processUpTo(state, t_fullFrameWalk, layout.ln_f.lnResid, processState);
 
 
-        // let t_endFrame = afterTime(null, 1.0, 0.5);
-        // moveCameraTo(state, t_endFrame, new Vec3(-18.3, 0, -1576), new Vec3(280.6, 9.7, 1.9));
-        // let t_endFrameWalk = afterTime(null, 2.0, 0.5);
-        // processUpTo(state, t_endFrameWalk, layout.ln_f.lnResid, processState);
-
         let t_output = afterTime(null, 1.0, 0.5);
-        moveCameraTo(state, t_output, new Vec3(-58.4, 0, -1654.9), new Vec3(271.3, 6.4, 1.1));
-        // moveCameraTo(state, t_output, new Vec3(-53.9, 0, -1654.1), new Vec3(270.9, 6.2, 1.1));
+        const outputCamera = cameraForBlocks(layout.cubes.slice(layout.ln_f.lnAgg1.idx), state.render.size, new Vec3(271.3, 6.4));
+        moveCameraTo(state, t_output, outputCamera.center, outputCamera.angle);
         let t_outputWalk = afterTime(null, 2.0, 0.5);
         processUpTo(state, t_outputWalk, layout.logitsSoftmax, processState);
 

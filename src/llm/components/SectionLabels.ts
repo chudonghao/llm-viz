@@ -1,3 +1,5 @@
+import { Locale } from "../i18n/locale";
+import { translate } from "../i18n/messages";
 import { TextAlignHoriz, TextAlignVert } from "../Annotations";
 import { IGptModelLayout } from "../GptModelLayout";
 import { measureTextWidth, writeTextToBuffer } from "../render/fontRender";
@@ -7,7 +9,7 @@ import { lerp } from "@/src/utils/math";
 import { Mat4f } from "@/src/utils/matrix";
 import { Vec3, Vec4 } from "@/src/utils/vector";
 
-export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout) {
+export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout, locale: Locale) {
 
     // probably should limit this to specific blocks (defined by walkthrough)
     // can configure this on the blocks themselves, or the layout object
@@ -20,7 +22,7 @@ export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout) {
         let color = baseColor.mul(layout.embedLabel.visible);
         let tl = new Vec3(layout.tokEmbedObj.x - layout.margin * 2, layout.tokEmbedObj.y, 0);
         let br = new Vec3(layout.tokEmbedObj.x - layout.margin * 2, layout.tokEmbedObj.y + layout.tokEmbedObj.dy, 0);
-        drawSectionLabel(state, "Embedding", tl, br, { color, fontSize: 6, pad: 4 });
+        drawSectionLabel(state, translate(locale, 'model.section.embedding'), tl, br, { color, fontSize: 6, pad: 4 });
     }
 
     let transformerIdx = 0;
@@ -42,28 +44,28 @@ export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout) {
             let color = baseColor.mul(block.mlpResidual.opacity * block.transformerLabel.visible);
             let tl = new Vec3(blockLeft, blockTop, 0);
             let br = new Vec3(blockLeft, blockBottom, 0);
-            drawSectionLabel(state, `Transformer ${transformerIdx}`, tl, br, { color, fontSize: 26 });
+            drawSectionLabel(state, translate(locale, 'model.section.transformer').replace('{index}', transformerIdx.toString()), tl, br, { color, fontSize: 26 });
         }
 
         {
             let color = baseColor.mul(block.attnResidual.opacity * block.selfAttendLabel.visible);
             let tl = new Vec3(attnLeft, blockTop, 0);
             let br = new Vec3(attnLeft, attnProjBot, 0);
-            drawSectionLabel(state, `Self-attention`, tl, br, { color, fontSize: 12 });
+            drawSectionLabel(state, translate(locale, 'model.section.selfAttention'), tl, br, { color, fontSize: 12 });
         }
 
         {
             let color = baseColor.mul(block.mlpAct.opacity * block.mlpLabel.visible);
             let tl = new Vec3(mlpLeft, mlpTop, 0);
             let br = new Vec3(mlpLeft, blockBottom, 0);
-            drawSectionLabel(state, `MLP`, tl, br, { color, fontSize: 12 });
+            drawSectionLabel(state, translate(locale, 'model.section.mlp'), tl, br, { color, fontSize: 12 });
         }
 
         {
             let color = baseColor.mul(block.attnOut.opacity * block.projLabel.visible);
             let tl = new Vec3(attnLabelLeft, attnProjTop, 0);
             let br = new Vec3(attnLabelLeft, attnProjBot, 0);
-            drawSectionLabel(state, `Projection`, tl, br, { color, fontSize: 10 });
+            drawSectionLabel(state, translate(locale, 'model.section.projection'), tl, br, { color, fontSize: 10 });
         }
 
         let headIdx = 0;
@@ -78,7 +80,7 @@ export function drawBlockLabels(state: IRenderState, layout: IGptModelLayout) {
                     br = new Vec3(attnLabelLeft, head.vOutBlock.y + head.vOutBlock.dy, head.vOutBlock.z + head.vOutBlock.dz / 2);
                 }
 
-                drawSectionLabel(state, `Head ${headIdx}`, tl, br, { color, fontSize: 10 });
+                drawSectionLabel(state, translate(locale, 'model.section.head').replace('{index}', headIdx.toString()), tl, br, { color, fontSize: 10 });
             }
 
 

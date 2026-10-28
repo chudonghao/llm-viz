@@ -287,7 +287,7 @@ export function runProgram(view: IRenderView, state: IProgramState) {
     // manageMovement(state, view);
     runMouseHitTesting(state);
     state.render.sharedRender.activePhase = RenderPhase.Opaque;
-    drawBlockLabels(state.render, state.layout);
+    drawBlockLabels(state.render, state.layout, state.walkthrough.locale);
 
     let lineNo = 1;
     let tw = state.render.size.x;

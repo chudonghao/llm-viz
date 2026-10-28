@@ -1,3 +1,4 @@
+import { translate } from "../i18n/messages";
 import { camScaleToScreen } from "../Camera";
 import { IProgramState } from "../Program";
 import { drawText, IFontOpts, measureText } from "../render/fontRender";
@@ -25,7 +26,7 @@ export function drawBlockInfo(state: IProgramState) {
         }
 
         // draw text, centered on top of the block
-        let text = blk.name;
+        let text = blk.nameKey ? translate(state.walkthrough.locale, blk.nameKey) : blk.name;
         let mtx = Mat4f.fromTranslation(blkTopMid);
         let textOpts: IFontOpts = { color: textColor, size: scale * 2.5, mtx };
         let textW = measureText(state.render.modelFontBuf, text, textOpts);

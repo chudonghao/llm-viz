@@ -1,38 +1,9 @@
+import { decodeFontFace, measureFontTextWidth, scaleFudgeFactor } from "./fontMetrics";
 import { base64ToArrayBuffer } from "@/src/utils/data";
 import { Mat4f } from "@/src/utils/matrix";
 import { bindFloatAttribs, createFloatBuffer, createShaderProgram, ensureFloatBufferSize, ensureShadersReady, IFloatBuffer, IGLContext, resetFloatBufferMap, uploadFloatBuffer } from "@/src/utils/shader";
 import { Vec4 } from "@/src/utils/vector";
 import { ISharedRender, modelViewUboText, RenderPhase, UboBindings } from "./sharedRender";
-
-export interface ICharDef {
-    id: number;
-    index: number;
-    char: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    xoffset: number;
-    yoffset: number;
-    xadvance: number;
-    page: number;
-    chnl: number;
-}
-
-export interface IKerningDef {
-    first: number;
-    second: number;
-    amount: number;
-}
-
-export interface IFontCommonDef {
-    lineHeight: number;
-    base: number;
-    scaleW: number;
-    scaleH: number;
-    pages: number;
-    // assume multi-color msdf font
-}
 
 const floatsPerSegment = 16 + 4;
 
@@ -170,62 +141,10 @@ export function setupFontAtlas(ctx: IGLContext, data: IFontAtlasData) {
     gl.uniform1i(locs.u_transformTex, 1);
 
     let faceInfos = [];
-
     for (let face of fontDef.faces) {
-        let charArr = new Int16Array(base64ToArrayBuffer(face.chars));
-
-        let perCharSize = 12;
-        let numChars = charArr.length / perCharSize;
-
-        let charMap = new Map<string, ICharDef>();
-        let charCodeMap = new Map<number, ICharDef>();
-        let chars: ICharDef[] = [];
-        for (let i = 0; i < numChars; i++) {
-            let offset = i * perCharSize;
-            let char: ICharDef = {
-                id: charArr[offset + 0],
-                index: charArr[offset + 1],
-                char: String.fromCharCode(charArr[offset + 2]),
-                x: charArr[offset + 3],
-                y: charArr[offset + 4],
-                width: charArr[offset + 5],
-                height: charArr[offset + 6],
-                xoffset: charArr[offset + 7],
-                yoffset: charArr[offset + 8],
-                xadvance: charArr[offset + 9],
-                page: charArr[offset + 10],
-                chnl: charArr[offset + 11],
-            };
-            charMap.set(char.char, char);
-            charCodeMap.set(char.id, char);
-            chars.push(char);
-        }
-
-        let kernArr = new Int16Array(base64ToArrayBuffer(face.kernings));
-
-        let perKernSize = 3;
-        let numKerns = kernArr.length / perKernSize;
-
-        let kernMap = new Map<string, number>();
-
-        for (let i = 0; i < numKerns; i++) {
-            let offset = i * perKernSize;
-            let kern = {
-                first: kernArr[offset + 0],
-                second: kernArr[offset + 1],
-                amount: kernArr[offset + 2],
-            };
-            let firstChar = charCodeMap.get(kern.first)!.char;
-            let secondChar = charCodeMap.get(kern.second)!.char;
-            kernMap.set(`${firstChar}${secondChar}`, kern.amount);
-        }
-
-        faceInfos.push({
-            name: face.name,
-            common: face.common as IFontCommonDef,
-            charMap,
-            kernMap,
-        });
+        faceInfos.push(decodeFontFace(face.name, face.common,
+            new Int16Array(base64ToArrayBuffer(face.chars)),
+            new Int16Array(base64ToArrayBuffer(face.kernings))));
     }
 
     return {
@@ -281,24 +200,9 @@ export function computeTexHeight(numSegments: number) {
     return Math.ceil(numSegments * floatsPerSegment / 4 / texWidth);
 }
 
- // Fudge factor to get it the same as HTML/CSS at the same px size
-let scaleFudgeFactor = 1.04;
-
 export function measureTextWidth(fontBuf: IFontBuffers, text: string, scale: number = 1.0, faceName?: string) {
-    let face = faceName ? fontBuf.atlas.faceInfos.find(a => a.name === faceName)! : fontBuf.atlas.faceInfos[0];
-    let x = 0;
-    let prevCodePoint = '';
-    for (let codePoint of text) {
-        let charDef = face.charMap.get(codePoint);
-        if (!charDef) {
-            continue;
-        }
-        let kernKey = `${prevCodePoint}${codePoint}`;
-        let kernAmount = face.kernMap.get(kernKey) || 0;
-        x += kernAmount + charDef.xadvance;
-        prevCodePoint = codePoint;
-    }
-    return x * scale / face.common.lineHeight * scaleFudgeFactor;
+    let face = (faceName ? fontBuf.atlas.faceInfos.find(a => a.name === faceName) : undefined) ?? fontBuf.atlas.faceInfos[0];
+    return measureFontTextWidth(face, text, scale);
 }
 
 export interface IFontOpts {

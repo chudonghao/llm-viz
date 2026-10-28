@@ -368,6 +368,50 @@ might capture more complex semantic relationships, discourse structures, and con
 
 `,
 
+    'softmax.explanation': `
+
+The softmax operation is used as part of self-attention, as seen in the previous section, and it
+will also appear at the very end of the model.
+
+Its goal is to take a vector and normalize its values so that they sum to 1.0. However, it's not as
+simple as dividing by the sum. Instead, each input value is first exponentiated.
+
+  a = exp(x_1)
+
+This has the effect of making all values positive. Once we have a vector of our exponentiated
+values, we can then divide each value by the sum of all the values. This will ensure that the sum
+of the values is 1.0. Since all the exponentiated values are positive, we know that the resulting
+values will be between 0.0 and 1.0, which provides a probability distribution over the original values.
+
+That's it for softmax: simply exponentiate the values and then divide by the sum.
+
+However, there's a slight complication. If any of the input values are quite large, then the
+exponentiated values will be very large. We'll end up dividing a large number by a very large number,
+and this can cause issues with floating-point arithmetic.
+
+One useful property of the softmax operation is that if we add a constant to all the input values,
+the result will be the same. So we can find the largest value in the input vector and subtract it
+from all the values. This ensures that the largest value is 0.0, and the softmax remains numerically
+stable.
+
+Let's take a look at the softmax operation in the context of the self-attention layer. Our input
+vector for each softmax operation is a row of the self-attention matrix (but only up to the diagonal).
+
+Like with layer normalization, we have an intermediate step where we store some aggregation values
+to keep the process efficient.
+
+For each row, we store the max value in the row and the sum of the shifted & exponentiated values.
+Then, to produce the corresponding output row, we can perform a small set of operations: subtract the
+max, exponentiate, and divide by the sum.
+
+What's with the name "softmax"? The "hard" version of this operation, called argmax, simply finds
+the maximum value, sets it to 1.0, and assigns 0.0 to all other values. In contrast, the softmax
+operation serves as a "softer" version of that. Due to the exponentiation involved in softmax, the
+largest value is emphasized and pushed towards 1.0, while still maintaining a probability distribution
+over all input values. This allows for a more nuanced representation that captures not only the most
+likely option but also the relative likelihood of other options.
+`,
+
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -623,6 +667,28 @@ MLP 会独立处理每个长度为 {channels} 的列向量，依次执行：
 这些块构成了 GPT 模型的主体，并重复堆叠多次。前一个块的输出会传入下一个块，使残差通路贯穿整个堆叠结构。
 
 与深度学习中的许多情况一样，很难准确说明每一层具体在做什么，但我们有一些大致认识：较靠前的层往往侧重于学习基础特征和模式，较靠后的层则学习识别和理解更抽象的概念与关系。在自然语言处理中，较浅的层可能学习语法、句法以及词语之间的简单关联；较深的层则可能捕捉更复杂的语义关系、篇章结构和依赖上下文的含义。`,
+
+    'softmax.explanation': `前面介绍自注意力时，我们已经见过 Softmax 运算；它也会出现在模型的最后阶段。
+
+Softmax 的目标是对向量中的数值进行归一化，使它们的和为 1.0。但它并不是直接把每个输入值除以总和，而是先对每个输入值计算指数函数：
+
+  a = exp(x_1)
+
+指数运算会让所有结果都为正数。接着，将每个指数结果除以所有指数结果的总和，所得数值的和就是 1.0。由于它们都为正，归一化后的值介于 0.0 和 1.0 之间，在输入向量的各个位置上形成一个概率分布。
+
+因此，Softmax 的基本过程就是：先取指数，再除以总和。
+
+不过，还需要处理一个数值问题。如果输入值很大，指数结果就会非常大。用很大的数除以更大的数，可能导致浮点运算出现问题。
+
+Softmax 有一个有用的性质：给所有输入值加上同一个常数，输出结果不变。因此，可以先找出输入向量中的最大值，再让每个元素减去它。这样，处理后的最大值就是 0.0，而 Softmax 的结果保持不变，计算也更加稳定。
+
+回到自注意力层，每次 Softmax 运算的输入是自注意力矩阵中的一行，但只包含对角线及其左侧的元素。
+
+与层归一化类似，这里也会先计算并存储一些聚合值，以提高计算效率。
+
+对每一行，我们保存该行的最大值，以及所有有效元素减去最大值后取指数的总和。之后，计算对应的输出行时，只需对每个有效元素依次执行：减去最大值、取指数、除以这个总和。
+
+为什么叫“Softmax”？可以把只选择最大值的方式看作“硬”版本：先用 argmax 找到最大值所在的位置，再把该位置设为 1.0，其他位置设为 0.0。Softmax 则提供更平滑的分配方式：指数运算会突出较大的输入值，使其获得较高概率，同时保留所有输入位置上的概率分布。这样，结果既能反映哪个选项最有可能，也能保留其他选项的相对可能性。`,
 
 };
 

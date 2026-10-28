@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { LayerView } from './LayerView';
 import { LanguageProvider, useI18n } from './i18n/LanguageProvider';
 import { isLocale } from './i18n/locale';
@@ -23,7 +22,8 @@ function LlmHeader() {
                 <option value="en" lang="en">English</option>
                 <option value="zh-CN" lang="zh-CN">简体中文</option>
             </select>
-            <Link href="/">{t('page.home')}</Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- The host site's homepage is outside this app's basePath. */}
+            <a href="/">{t('page.home')}</a>
         </nav>
     </header>;
 }

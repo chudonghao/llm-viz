@@ -23,6 +23,7 @@ import { ModelSelectorToolbar } from './components/ModelSelectorToolbar';
 import { useI18n } from './i18n/LanguageProvider';
 import type { Locale } from './i18n/locale';
 import { setWalkthroughLocale } from './walkthrough/Walkthrough';
+import { withBasePath } from '@/src/utils/paths';
 
 async function fetchTensorData(url: string): Promise<ITensorSet> {
     let resp = await fetch(url);
@@ -135,8 +136,8 @@ export function LayerView() {
     useEffect(() => {
         let stale = false;
         async function getData() {
-            let dataP = fetchTensorData('gpt-nano-sort-t0-partials.json');
-            let modelP = fetchTensorData('gpt-nano-sort-model.json');
+            let dataP = fetchTensorData(withBasePath('/gpt-nano-sort-t0-partials.json'));
+            let modelP = fetchTensorData(withBasePath('/gpt-nano-sort-model.json'));
             let nativeBindingsP = loadNativeBindings();
             let [data, model, native] = await Promise.all([dataP, modelP, nativeBindingsP]);
             if (stale) return;

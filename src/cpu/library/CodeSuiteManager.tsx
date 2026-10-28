@@ -1,4 +1,5 @@
 import { Subscriptions, useSubscriptions } from "@/src/utils/hooks";
+import { withBasePath } from "@/src/utils/paths";
 import { IElfTextSection, listElfTextSections, readElfHeader } from "../ElfParser";
 
 export interface ICodeSuite {
@@ -53,8 +54,7 @@ export class CodeSuiteManager {
             return;
         }
 
-        let basePath = (process.env.BASE_URL ?? '') + '/riscv/examples/';
-        let resp = await fetch(basePath + suite.fileName);
+        let resp = await fetch(withBasePath('/riscv/examples/' + suite.fileName));
 
         if (!resp.ok) {
             let respBody = await resp.text();

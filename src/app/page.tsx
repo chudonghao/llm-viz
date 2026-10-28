@@ -1,9 +1,9 @@
-import React from 'react';
-import { HomePage } from '@/src/homepage/HomePage';
+import { LlmPage } from '@/src/llm/LlmPage';
+
+export const metadata = {
+  description: 'A 3D animated visualization of an LLM with a walkthrough.',
+};
 
 export default function Page() {
-    return <>
-        <HomePage />
-        <div id="portal-container"></div>
-    </>;
+    return <LlmPage />;
 }

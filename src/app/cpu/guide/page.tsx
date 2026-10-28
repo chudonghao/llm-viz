@@ -51,7 +51,7 @@ const GuideSection: React.FC<{
 }> = ({ dir, header, children }) => {
     let entry = guideEntries.find(x => x.id === dir)!;
 
-    return <Link href={'guide' + entry.path}>
+    return <Link href={'/cpu/guide' + entry.path}>
         <div className='rounded bg-green-100 mx-4 my-2 shadow hover:shadow-lg overflow-hidden'>
             {header && <div className='border-b-green-200 bg-green-200 p-2'><span className='text-sm bg-green-300 p-2'>{header}</span> <span className='font-bold ml-2'>{entry.name}</span></div>}
             <div className='mx-2 my-2'>

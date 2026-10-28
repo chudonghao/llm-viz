@@ -7,6 +7,7 @@ import { createSchematicCompDef } from "../comps/SchematicComp";
 import { schematicManifest } from "../schematics/SchematicManifest";
 import { constructEditSnapshot } from "../ModelHelpers";
 import { Subscriptions } from "@/src/utils/hooks";
+import { withBasePath } from "@/src/utils/paths";
 
 export class SchematicLibrary {
     subs = new Subscriptions();
@@ -221,7 +222,7 @@ export const ${nameToCamel}SchematicStr = \`${dataStr}\`;
             return;
         }
 
-        const res = await fetch(`cpu/api/save-schematic-to-file?filename=${nameToCamel}`, {
+        const res = await fetch(withBasePath(`/cpu/api/save-schematic-to-file?filename=${nameToCamel}`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain',

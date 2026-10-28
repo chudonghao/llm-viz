@@ -38,3 +38,16 @@ afterward to restore the Chinese subset in the public atlas.
 
 After regenerating, check the labels in both languages at desktop and narrow
 widths, including camera zoom and label overlap.
+
+## Web page fonts
+
+`web/` contains the unmodified Roboto Regular (v51), Merriweather Regular and
+Merriweather Italic (v33) files supplied by the previous
+[Google Fonts stylesheet](https://fonts.googleapis.com/css2?family=Roboto&family=Merriweather:ital@0;1&display=optional),
+downloaded on 2026-10-28. `styles/fonts.css` retains their family names, styles,
+weights and optional font display. Next.js bundles these local files under
+`/llm/_next/static/media/`, so page rendering needs no Google Fonts requests.
+
+Their SIL Open Font Licenses are included in static exports as
+[`Roboto-OFL.txt`](../public/fonts/Roboto-OFL.txt) and
+[`Merriweather-OFL.txt`](../public/fonts/Merriweather-OFL.txt).

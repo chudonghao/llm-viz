@@ -4,6 +4,7 @@ import { Mat4f } from "@/src/utils/matrix";
 import { bindFloatAttribs, createFloatBuffer, createShaderProgram, ensureFloatBufferSize, ensureShadersReady, IFloatBuffer, IGLContext, resetFloatBufferMap, uploadFloatBuffer } from "@/src/utils/shader";
 import { Vec4 } from "@/src/utils/vector";
 import { ISharedRender, modelViewUboText, RenderPhase, UboBindings } from "./sharedRender";
+import { withBasePath } from "@/src/utils/paths";
 
 const floatsPerSegment = 16 + 4;
 
@@ -38,9 +39,9 @@ export async function fetchFontAtlasData(): Promise<IFontAtlasData> {
         imgEl.onload = () => resolve(imgEl);
         imgEl.onerror = () => reject();
     });
-    imgEl.src = 'fonts/font-atlas.png';
+    imgEl.src = withBasePath('/fonts/font-atlas.png');
 
-    let fontDefP = fetch('fonts/font-def.json', { credentials: 'include', mode: 'no-cors' }).then(r => r.json());
+    let fontDefP = fetch(withBasePath('/fonts/font-def.json'), { credentials: 'include', mode: 'no-cors' }).then(r => r.json());
 
     let [fontAtlasImage, fontDef] = await Promise.all([imgP, fontDefP]);
 

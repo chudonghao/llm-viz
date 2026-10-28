@@ -616,53 +616,55 @@ export function genGptModelLayout(shape: IModelShape, gptGpuModel: IGptModelLink
 
         y = vFinalZ + C * cell + margin;
 
-        let ln2 = createLn(0, attnResidual, target?.ln_2);
+        // Keep each token in a column, with the expansion and activation side by side.
+        const mlpActLeftX = leftX - T * cell;
+        const mlpFcRightX = mlpActLeftX - margin;
+        const mlpFcWeightRightX = mlpFcRightX - T * cell - margin;
+        const mlpProjWeightRightX = mlpActLeftX - margin;
+
+        let ln2 = createLn(mlpFcRightX - leftX, attnResidual, target?.ln_2);
+
+        y += C * cell + margin;
 
         let mlpFcWeight = mk({
-            t: 'w', cx: C * 4, cz: 1, cy: C, y: y,
-            xR: attnLeftX, zM: 0,
-            access: { src: target?.mlp.fcLayer.weight, x: [0, 1, 0], y: [1, 0, 0], scale: C * 0.5 },
-            dimX: DimStyle.C4, dimY: DimStyle.C,
+            t: 'w', cx: C, cz: 1, cy: C * 4, y: y,
+            xR: mlpFcWeightRightX, zM: 0,
+            access: { src: target?.mlp.fcLayer.weight, x: [1, 0, 0], y: [0, 1, 0], scale: C * 0.5 },
+            dimX: DimStyle.C, dimY: DimStyle.C4,
             nameKey: 'model.block.mlpWeights',
         });
 
         let mlpFcBias = mk({
-            t: 'w', cx: C * 4, cz: 1, cy: 1, y: y - 1 * cell - margin,
-            xR: attnLeftX, zM: 0,
-            access: { src: target?.mlp.fcLayer.bias!, x: [0, 1, 0], y: [1, 0, 0], scale: C * 0.5 },
-            dimX: DimStyle.C4, dimY: DimStyle.None,
+            t: 'w', cx: 1, cz: 1, cy: C * 4, y: y,
+            xR: mlpFcWeightRightX - C * cell - margin, zM: 0,
+            access: { src: target?.mlp.fcLayer.bias!, x: [1, 0, 0], y: [0, 1, 0], scale: C * 0.5 },
+            dimX: DimStyle.None, dimY: DimStyle.C4,
             nameKey: 'model.block.mlpBias', small: true,
         });
 
-        y += C * cell + margin;
-
         let mlpFc = mk({
-            t: 'i', cx: C * 4, cz: B, cy: T, y: y,
-            xR: attnLeftX, zM: 0,
-            access: { src: target?.mlp.fcLayer.output, x: [1, 0, 0], y: [0, 1, T], scale: 1.0 },
-            deps: { dot: [[mlpFcWeight, 'xi'], [ln2.lnResid, 'yi']], dotLen: C, add: [[mlpFcBias, 'x']] },
-            dimX: DimStyle.C4, dimY: DimStyle.T,
+            t: 'i', cx: T, cz: B, cy: C * 4, y: y,
+            xR: mlpFcRightX, zM: 0,
+            access: { src: target?.mlp.fcLayer.output, x: [0, 1, 0], y: [1, 0, T], scale: 1.0 },
+            deps: { dot: [[mlpFcWeight, 'iy'], [ln2.lnResid, 'xi']], dotLen: C, add: [[mlpFcBias, '0y']] },
+            dimX: DimStyle.T, dimY: DimStyle.C4,
             nameKey: 'model.block.mlp',
-            transpose: true,
         });
-
-        y += T * cell + margin;
 
         let mlpAct = mk({
-            t: 'i', cx: C * 4, cz: B, cy: T, y: y,
-            xR: attnLeftX, zM: 0,
-            access: { src: target?.mlp.mlpGelu, x: [1, 0, 0], y: [0, 1, T], scale: 1.0 },
+            t: 'i', cx: T, cz: B, cy: C * 4, y: y,
+            xL: mlpActLeftX, zM: 0,
+            access: { src: target?.mlp.mlpGelu, x: [0, 1, 0], y: [1, 0, T], scale: 1.0 },
             deps: { add: [[mlpFc, 'xy']], special: BlKDepSpecial.Gelu },
-            dimX: DimStyle.C4, dimY: DimStyle.T,
+            dimX: DimStyle.T, dimY: DimStyle.C4,
             nameKey: 'model.block.mlpActivation',
-            transpose: true,
         });
 
-        y += T * cell + margin;
+        y += C * 4 * cell + margin;
 
         let mlpProjWeight = mk({
             t: 'w', cx: C * 4, cz: 1, cy: C, y: y,
-            xR: attnLeftX, zM: 0,
+            xR: mlpProjWeightRightX, zM: 0,
             access: { src: target?.mlp.projLayer.weight, x: [1, 0, 0], y: [0, 1, 0], scale: C * 0.5 },
             dimX: DimStyle.C4, dimY: DimStyle.C,
             nameKey: 'model.block.mlpProjectionWeights',
@@ -670,7 +672,7 @@ export function genGptModelLayout(shape: IModelShape, gptGpuModel: IGptModelLink
 
         let mlpProjBias = mk({
             t: 'w', cx: 1, cz: 1, cy: C, y: y,
-            xR: attnLeftX - C * 4 * cell - margin, zM: 0,
+            xR: mlpProjWeightRightX - C * 4 * cell - margin, zM: 0,
             access: { src: target?.mlp.projLayer.bias!, x: [1, 0, 0], y: [0, 1, 0], scale: C * 0.5 },
             dimX: DimStyle.None, dimY: DimStyle.C, small: true,
             nameKey: 'model.block.mlpProjectionBias',
@@ -678,9 +680,9 @@ export function genGptModelLayout(shape: IModelShape, gptGpuModel: IGptModelLink
 
         let mlpResult = mk({
             t: 'i', cx: T, cz: B, cy: C, y: y,
-            xL: attnLeftX + margin, zM: 0,
+            xL: mlpActLeftX, zM: 0,
             access: { src: target?.mlp.projLayer.output, x: [0, 1, 0], y: [1, 0, T] },
-            deps: { dot: [[mlpProjWeight, 'iy'], [mlpAct, 'ix']], dotLen: C, add: [[mlpProjBias, '0y']] },
+            deps: { dot: [[mlpProjWeight, 'iy'], [mlpAct, 'xi']], dotLen: C * 4, add: [[mlpProjBias, '0y']] },
             dimX: DimStyle.T, dimY: DimStyle.C,
             nameKey: 'model.block.mlpResult',
         });

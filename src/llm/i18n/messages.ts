@@ -412,6 +412,44 @@ over all input values. This allows for a more nuanced representation that captur
 likely option but also the relative likelihood of other options.
 `,
 
+    'output.explanation': `
+
+Finally, we come to the end of the model. The output of the final transformer block is passed through
+a layer normalization, and then we use a linear transformation (matrix multiplication), this time without a bias.
+
+This final transformation takes each of our column vectors from length C to length nvocab. Hence,
+it's effectively producing a score for each word in the vocabulary for each of our columns. These
+scores have a special name: logits.
+
+The name "logits" comes from "log-odds," i.e., the logarithm of the odds of each token. "Log" is
+used because the softmax we apply next does an exponentiation to convert to "odds" or probabilities.
+
+To convert these scores into nice probabilities, we pass them through a softmax operation. Now, for
+each column, we have a probability the model assigns to each word in the vocabulary.
+
+In this particular model, it has effectively learned all the answers to the question of how to sort
+three letters, so the probabilities are heavily weighted toward the correct answer.
+
+When we're stepping the model through time, we use the last column's probabilities to determine the
+next token to add to the sequence. For example, if we've supplied six tokens into the model, we'll
+use the output probabilities of the 6th column.
+
+This column's output is a series of probabilities, and we actually have to pick one of them to use
+as the next in the sequence. We do this by "sampling from the distribution." That is, we randomly
+choose a token, weighted by its probability. For example, a token with a probability of 0.9 will be
+chosen 90% of the time.
+
+There are other options here, however, such as always choosing the token with the highest probability.
+
+We can also control the "smoothness" of the distribution by using a temperature parameter. A higher
+temperature will make the distribution more uniform, and a lower temperature will make it more
+concentrated on the highest probability tokens.
+
+We do this by dividing the logits (the output of the linear transformation) by the temperature before
+applying the softmax. Since the exponentiation in the softmax has a large effect on larger numbers,
+making them all closer together will reduce this effect.
+`,
+
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -689,6 +727,26 @@ Softmax 有一个有用的性质：给所有输入值加上同一个常数，输
 对每一行，我们保存该行的最大值，以及所有有效元素减去最大值后取指数的总和。之后，计算对应的输出行时，只需对每个有效元素依次执行：减去最大值、取指数、除以这个总和。
 
 为什么叫“Softmax”？可以把只选择最大值的方式看作“硬”版本：先用 argmax 找到最大值所在的位置，再把该位置设为 1.0，其他位置设为 0.0。Softmax 则提供更平滑的分配方式：指数运算会突出较大的输入值，使其获得较高概率，同时保留所有输入位置上的概率分布。这样，结果既能反映哪个选项最有可能，也能保留其他选项的相对可能性。`,
+
+    'output.explanation': `最后来到模型的输出端：最后一个 Transformer 块的输出先经过层归一化，再进行一次线性变换（矩阵乘法），这次不加偏置。
+
+这次变换把每个列向量的长度从 C 变为 nvocab，也就是词表的大小。因此，每一列都会得到词表中每个词元的一个分数。这些分数称为 _logits（未归一化分数）_。
+
+logits 的名称与_对数几率（log-odds）_有关。这里的 logits 指尚未归一化的词元分数；Softmax 会先对这些分数取指数，再归一化为概率。
+
+把这些分数送入 Softmax，就得到概率。对每一列而言，这些概率表示模型认为词表中各个词元作为下一个词元的可能性。
+
+这个演示模型已经学会了对 A、B、C 三种字母组成的序列进行排序，因此输出概率主要集中在正确答案上。
+
+逐步生成序列时，我们根据最后一列的概率选择下一个要追加的词元。例如，输入序列包含 6 个词元时，就使用第 6 列的输出概率。
+
+这一列给出的是一个概率分布，还需要从中选出一个词元作为序列的下一项。我们通过_从分布中采样（sampling from the distribution）_来选择：按各词元的概率进行随机选择。例如，概率为 0.9 的词元，每次采样时有 90% 的机会被选中。
+
+也可以采用其他选择策略，比如每次都选概率最高的词元。
+
+还可以用一个正的_温度（temperature）_参数调节分布的“平滑程度”。温度较高时，分布更加均匀；温度较低时，概率更集中在得分最高的词元上。
+
+具体做法是：在应用 Softmax 之前，先将 logits（线性变换的输出）除以温度。当温度升高时，分数之间的差距会缩小，指数运算对较大分数的强调作用也会减弱。`,
 
 };
 

@@ -1,9 +1,10 @@
-import { IBlkDef, IModelLayout } from "./GptModelLayout";
+import { IBlkDef, IGptModelLayout, IModelLayout } from "./GptModelLayout";
 import { IProgramState } from "./Program";
 import { Mat4f } from "@/src/utils/matrix";
 import { BoundingBox3d, Vec3 } from "@/src/utils/vector";
 import { IRenderView } from "./render/modelRender";
 import { clamp } from "../utils/data";
+import { modelCardLayout, modelCardMaxScale, modelCardScale, outputTokenBox } from "./components/ModelCardLayout";
 
 export interface ICamera {
     camPos: Vec3;
@@ -66,13 +67,55 @@ export function cameraToMatrixView(camera: ICameraPos) {
     };
 }
 
-// Fit model-space bounds using the same orientation, field of view and near plane as the renderer.
-export function cameraForBlocks(blocks: IBlkDef[], viewport: Vec3, angle: Vec3, padding: number = 1.2, offset: Vec3 = Vec3.zero): ICameraPos {
+function boundsForBlocks(blocks: IBlkDef[], offset: Vec3 = Vec3.zero) {
     const bounds = new BoundingBox3d();
     for (const block of blocks) {
         bounds.addInPlace(new Vec3(block.x, block.y, block.z).add(offset));
         bounds.addInPlace(new Vec3(block.x + block.dx, block.y + block.dy, block.z + block.dz).add(offset));
     }
+    return bounds;
+}
+
+export function cameraForBlocks(blocks: IBlkDef[], viewport: Vec3, angle: Vec3, padding: number = 1.2, offset: Vec3 = Vec3.zero): ICameraPos {
+    return cameraForBounds(boundsForBlocks(blocks, offset), viewport, angle, padding);
+}
+
+export function cameraForOutput(layout: IGptModelLayout, viewport: Vec3, angle: Vec3,
+    blocks: IBlkDef[] = layout.cubes.slice(layout.ln_f.lnAgg1.idx)): ICameraPos {
+    const bounds = boundsForBlocks(blocks);
+    const { tl, br } = outputTokenBox(layout);
+    // The connecting lines lie between Softmax and this token box.
+    bounds.addInPlace(tl).addInPlace(br);
+    return cameraForBounds(bounds, viewport, angle);
+}
+
+export function cameraForModel(layout: IGptModelLayout, viewport: Vec3, angle: Vec3,
+    options: { offset?: Vec3; modelCardOffset?: Vec3; includeOutput?: boolean } = {}): ICameraPos {
+    const offset = options.offset ?? Vec3.zero;
+    const cardOffset = offset.add(options.modelCardOffset ?? Vec3.zero);
+    const bounds = boundsForBlocks(layout.cubes, offset);
+    if (options.includeOutput ?? true) {
+        const { tl, br } = outputTokenBox(layout);
+        bounds.addInPlace(tl.add(offset)).addInPlace(br.add(offset));
+    }
+    let camera = cameraForBounds(bounds, viewport, angle);
+    // Moving the camera also changes the card's scale. Grow the bounds until it fits.
+    for (let i = 0; i < 32; i++) {
+        const { camPos } = cameraToMatrixView(camera);
+        const card = modelCardLayout(modelCardScale(camPos), cardOffset).bounds;
+        if (bounds.contains(card.min) && bounds.contains(card.max)) {
+            return camera;
+        }
+        bounds.combineInPlace(card);
+        camera = cameraForBounds(bounds, viewport, angle);
+    }
+    // Very narrow viewports can require the card's maximum scale before converging.
+    bounds.combineInPlace(modelCardLayout(modelCardMaxScale, cardOffset).bounds);
+    return cameraForBounds(bounds, viewport, angle);
+}
+
+// Fit model-space bounds using the same orientation, field of view and near plane as the renderer.
+function cameraForBounds(bounds: BoundingBox3d, viewport: Vec3, angle: Vec3, padding: number = 1.2): ICameraPos {
     const mid = bounds.center();
     const center = new Vec3(mid.x, -mid.z, -mid.y);
     const view = cameraToMatrixView({ center, angle: new Vec3(angle.x, angle.y, 1) }).lookAt;

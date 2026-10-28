@@ -1,7 +1,7 @@
 import { Vec3 } from "@/src/utils/vector";
 import { Phase } from "./Walkthrough";
 import { localizedCommentary, IWalkthroughArgs, setInitialCamera } from "./WalkthroughTools";
-import { cameraForBlocks } from "../Camera";
+import { cameraForOutput } from "../Camera";
 
 export function walkthrough09_Output(args: IWalkthroughArgs) {
     let { walkthrough: wt, state } = args;
@@ -11,7 +11,7 @@ export function walkthrough09_Output(args: IWalkthroughArgs) {
     }
 
     const layout = state.layout;
-    const camera = cameraForBlocks(layout.cubes.slice(layout.ln_f.lnAgg1.idx), state.render.size, new Vec3(281.6, -7.9));
+    const camera = cameraForOutput(layout, state.render.size, new Vec3(281.6, -7.9));
     setInitialCamera(state, camera.center, camera.angle);
 
     localizedCommentary(wt, 'output.explanation', {}, null, 0);

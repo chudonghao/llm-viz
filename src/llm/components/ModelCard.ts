@@ -12,18 +12,13 @@ import { Dim, Vec3, Vec4 } from "@/src/utils/vector";
 import { DimStyle, dimStyleColor } from "../walkthrough/WalkthroughTools";
 import { lineHeight } from "./TextLayout";
 import { IColorMix } from "../Annotations";
-import { clamp } from "@/src/utils/data";
+import { modelCardLayout, modelCardScale, outputTokenBox } from "./ModelCardLayout";
 
 export function drawModelCard(state: IProgramState, layout: IGptModelLayout, title: string, offset: Vec3) {
     let { render } = state;
     let { camPos } = cameraToMatrixView(state.camera);
-    let dist = camPos.dist(new Vec3(0, 0, -30)); //.add(offset));
-
-    let scale = clamp(dist / 500.0, 1.0, 800.0);
-
-    let pinY = -60;
-    let mtx = Mat4f.fromScaleTranslation(new Vec3(scale, scale, scale), new Vec3(0, pinY, 0).add(offset))
-        .mul(Mat4f.fromTranslation(new Vec3(0, -pinY, 0)));
+    let scale = modelCardScale(camPos);
+    let { mtx, tl, br } = modelCardLayout(scale, offset);
 
     let thick = 1.0 / 10.0 * scale;
     let borderColor = Vec4.fromHexColor("#555599", 0.8);
@@ -33,8 +28,6 @@ export function drawModelCard(state: IProgramState, layout: IGptModelLayout, tit
 
     let lineOpts: ILineOpts = { color: borderColor, mtx, thick, n };
 
-    let tl = new Vec3(-45, -97, 0);
-    let br = new Vec3( 45, -70, 0);
     drawLineRect(render, tl, br, lineOpts);
 
     addQuad(render.triRender, new Vec3(tl.x, tl.y, -0.1), new Vec3(br.x, br.y, -0.1), backgroundColor, mtx);
@@ -329,14 +322,8 @@ function renderOutputAtBottom(state: IProgramState) {
     let softmax = layout.logitsSoftmax;
 
 
-    let topMid = new Vec3(softmax.x + softmax.dx/2, softmax.y + softmax.dy + layout.margin);
-
-    let outCellH = 10;
-    let outCellW = 6;
-
+    let { tl, br, cellWidth: outCellW } = outputTokenBox(layout);
     let nCells = layout.shape.T;
-    let tl = new Vec3(topMid.x - outCellW * nCells / 2, topMid.y);
-    let br = new Vec3(topMid.x + outCellW * nCells / 2, topMid.y + outCellH);
 
     let lineOpts = makeLineOpts({ color: Vec4.fromHexColor("#000000", 0.2), mtx: new Mat4f(), thick: 1.5 });
 

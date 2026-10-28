@@ -332,6 +332,8 @@ export function moveCameraTo(state: IProgramState, time: ITimeInfo, target: Vec3
             target: { angle: rot, center: target },
         });
     }
+    // Fitted targets can change with the viewport; the next move must start at the current target.
+    camData.target = { angle: rot, center: target };
 
     // if we transition from before the ITimeInfo to the start of it, we capture the camera position
     // we store the camera position in a map, keyed by the ITimeInfo name
@@ -350,10 +352,7 @@ export function moveCameraTo(state: IProgramState, time: ITimeInfo, target: Vec3
 
     let src = prevTime?.target ?? wt.cameraInitial ?? camData.initialCaptured;
 
-    let dest: ICameraPos = {
-        center: target,
-        angle: rot,
-    };
+    let dest: ICameraPos = camData.target;
 
     let isMoving = wt.running || wt.time !== wt.prevTime;
     let prevWasActive = wt.prevTime >= time.start && wt.prevTime <= time.start + time.duration;

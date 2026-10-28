@@ -14,7 +14,7 @@ import { drawDependences } from "../Interaction";
 import { drawDataFlow } from "../components/DataFlow";
 import { translate } from '../i18n/messages';
 import { useI18n } from '../i18n/LanguageProvider';
-import { cameraForBlocks } from "../Camera";
+import { cameraForBlocks, cameraForModel, cameraForOutput } from "../Camera";
 
 /*
 We're mostly on the right track here I think.
@@ -59,7 +59,7 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
         return;
     }
 
-    const initialCamera = cameraForBlocks(layout.cubes, state.render.size, new Vec3(296, 16));
+    const initialCamera = cameraForModel(layout, state.render.size, new Vec3(296, 16));
     setInitialCamera(state, initialCamera.center, initialCamera.angle);
 
     let c0 = localizedCommentary(wt, 'intro.welcome', { input: embed(ExampleInputOutput) }, null, 0);
@@ -191,14 +191,14 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
         }
 
         let t_fullFrame = afterTime(null, 1.0, 0.5);
-        const fullCamera = cameraForBlocks(layout.cubes, state.render.size, new Vec3(298.5, 23.4));
+        const fullCamera = cameraForModel(layout, state.render.size, new Vec3(298.5, 23.4));
         moveCameraTo(state, t_fullFrame, fullCamera.center, fullCamera.angle);
         let t_fullFrameWalk = afterTime(null, 5.0, 0.5);
         processUpTo(state, t_fullFrameWalk, layout.ln_f.lnResid, processState);
 
 
         let t_output = afterTime(null, 1.0, 0.5);
-        const outputCamera = cameraForBlocks(layout.cubes.slice(layout.ln_f.lnAgg1.idx), state.render.size, new Vec3(271.3, 6.4));
+        const outputCamera = cameraForOutput(layout, state.render.size, new Vec3(271.3, 6.4));
         moveCameraTo(state, t_output, outputCamera.center, outputCamera.angle);
         let t_outputWalk = afterTime(null, 2.0, 0.5);
         processUpTo(state, t_outputWalk, layout.logitsSoftmax, processState);

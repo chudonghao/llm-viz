@@ -8,7 +8,7 @@ import { addLine2, drawLineSegs, makeLineOpts } from "../render/lineRender";
 import { IRenderState } from "../render/modelRender";
 import { RenderPhase } from "../render/sharedRender";
 import { addPrimitiveRestart, addQuad, addVert } from "../render/triRender";
-import { isNotNil } from "@/src/utils/data";
+import { clamp, isNotNil } from "@/src/utils/data";
 import { lerp } from "@/src/utils/math";
 import { Mat4f } from "@/src/utils/matrix";
 import { BoundingBox3d, Dim, Vec3, Vec4 } from "@/src/utils/vector";
@@ -678,8 +678,11 @@ export function drawGeluActivation(args: IDataFlowArgs) {
     let w = 70;
     let h = 50;
 
-    let tl = center.sub(new Vec3(w / 2, h, 0));
-    let br = center.add(new Vec3(w / 2, 0, 0));
+    let bb = fitDataFlowBounds(args, new BoundingBox3d(
+        center.sub(new Vec3(w / 2, h, 0)),
+        center.add(new Vec3(w / 2, 0, 0)),
+    ));
+    let { min: tl, max: br } = bb;
 
     drawRoundedRect(state.render, tl, br, backWhiteColor, mtx, 4);
 
@@ -713,8 +716,6 @@ export function drawGeluActivation(args: IDataFlowArgs) {
         drawCircle(state.render, new Vec3(mappingX(srcVal), mappingY(destVal)), 2, 1, Colors.Intermediates, mtx);
     }
 
-    let bb = new BoundingBox3d(tl, br);
-
     return bb;
 }
 
@@ -724,7 +725,7 @@ export function createMapping(range0: number, range1: number, domain0: number, d
     return (x: number) => m * x + b;
 }
 
-function drawCellIndexAndValue(args: IDataFlowArgs, bb: BoundingBox3d): BoundingBox3d {
+function layoutCellIndexAndValue(args: IDataFlowArgs, bb: BoundingBox3d) {
     let { center, mtx, blk, destIdx } = args;
     let fontOpts = { color: opColor, mtx, size: 14 };
 
@@ -760,10 +761,30 @@ function drawCellIndexAndValue(args: IDataFlowArgs, bb: BoundingBox3d): Bounding
     let tl = textBlock.offset.sub(new Vec3(padX, padY));
     let br = textBlock.offset.add(textBlock.size).add(new Vec3(padX * 2, padY * 2));
 
-    drawRoundedRect(args.state.render, tl, br, backWhiteColor, mtx, 4);
+    return { textBlock, bounds: new BoundingBox3d(tl, br) };
+}
+
+function drawCellIndexAndValue(args: IDataFlowArgs, bb: BoundingBox3d): BoundingBox3d {
+    const { textBlock, bounds } = layoutCellIndexAndValue(args, bb);
+    drawRoundedRect(args.state.render, bounds.min, bounds.max, backWhiteColor, args.mtx, 4);
 
     drawBlock(args.state.render, textBlock);
-    return new BoundingBox3d(tl, br);
+    return bounds;
+}
+
+function fitDataFlowBounds(args: IDataFlowArgs, bb: BoundingBox3d) {
+    const indexBounds = layoutCellIndexAndValue(args, bb).bounds;
+    const fullBounds = new BoundingBox3d(bb.min, bb.max, indexBounds.min, indexBounds.max);
+    const size = fullBounds.size();
+    const viewport = args.state.render.size;
+    const margin = 8;
+    const offset = new Vec3(
+        clamp(fullBounds.min.x, margin, Math.max(margin, viewport.x - margin - size.x)) - fullBounds.min.x,
+        clamp(fullBounds.min.y, margin, Math.max(margin, viewport.y - margin - size.y)) - fullBounds.min.y,
+    );
+    // Move the graph and its index together, leaving dependency endpoints on their 3D cells.
+    args.center = args.center.add(offset);
+    return new BoundingBox3d(bb.min.add(offset), bb.max.add(offset));
 }
 
 

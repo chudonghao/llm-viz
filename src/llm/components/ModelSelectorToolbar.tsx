@@ -6,7 +6,7 @@ import { faExpand, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { Vec3 } from '@/src/utils/vector';
 import { Mat4f } from '@/src/utils/matrix';
 import { useI18n } from '../i18n/LanguageProvider';
-import { cameraForBlocks } from '../Camera';
+import { cameraForModel } from '../Camera';
 import { genGptModelLayout } from '../GptModelLayout';
 
 export const ModelSelectorToolbar: React.FC<{
@@ -17,8 +17,12 @@ export const ModelSelectorToolbar: React.FC<{
     function showModel(egIndex: number) {
         const example = progState.examples[egIndex] ?? progState.mainExample;
         const layout = egIndex === -1 ? progState.layout : (example.layout ??= genGptModelLayout(example.shape));
-        progState.camera.desiredCamera = cameraForBlocks(layout.cubes, progState.render.size,
-            example.camera?.angle ?? progState.camera.angle, 1.2, example.offset);
+        progState.camera.desiredCamera = cameraForModel(layout, progState.render.size,
+            example.camera?.angle ?? progState.camera.angle, {
+                offset: example.offset,
+                modelCardOffset: example.modelCardOffset,
+                includeOutput: egIndex === -1,
+            });
         progState.markDirty();
     }
 

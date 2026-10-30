@@ -4,7 +4,7 @@ let withBundleAnalyzer = require("@next/bundle-analyzer")({
     enabled: process.env.ANALYZE === "true",
 });
 
-const basePath = '/llm';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/llm';
 
 const nextConfig = {
   basePath,

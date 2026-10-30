@@ -1,0 +1,89 @@
+name: Build and deploy site
+
+on:
+    push:
+        branches: [feat/site]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: build-site-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    deploy-ftp:
+        name: Build and deploy via FTP
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '22'
+
+            - name: Install dependencies
+              run: node .yarn/releases/yarn-4.1.0.cjs install --immutable
+
+            - name: Build static site
+              run: node .yarn/releases/yarn-4.1.0.cjs build
+
+            - name: Deploy to chudonghao.cn/llm/
+              uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
+              with:
+                  server: ${{ secrets.FTP_SERVER }}
+                  username: ${{ secrets.FTP_USERNAME }}
+                  password: ${{ secrets.FTP_PASSWORD }}
+                  protocol: ${{ vars.FTP_PROTOCOL || 'ftp' }}
+                  port: ${{ vars.FTP_PORT || '21' }}
+                  security: strict
+                  local-dir: ./out/
+                  server-dir: /llm/
+
+    build-pages:
+        name: Build for GitHub Pages
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: read
+            pages: read
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '22'
+
+            - name: Configure GitHub Pages
+              id: pages
+              uses: actions/configure-pages@v6
+
+            - name: Install dependencies
+              run: node .yarn/releases/yarn-4.1.0.cjs install --immutable
+
+            - name: Build static site
+              run: node .yarn/releases/yarn-4.1.0.cjs build
+              env:
+                  NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+            - name: Upload GitHub Pages artifact
+              uses: actions/upload-pages-artifact@v5
+              with:
+                  path: ./out/
+
+    deploy-pages:
+        name: Deploy to GitHub Pages
+        needs: build-pages
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v5

@@ -1,3 +1,23 @@
+# 大语言模型可视化（中文版）
+
+本项目基于 Brendan Bycroft 的 LLM Visualization，提供[中文版在线体验](https://chudonghao.cn/llm/)，并调整 MLP 的可视化布局，帮助理解 GPT 类模型的推理过程。
+
+核心改动：
+
+- **中英双语支持**：汉化界面、教程和 3D 模型标签，支持简体中文与英文切换。
+- **MLP 列向量布局**：调整 MLP 的矩阵与向量布局，以“矩阵 × 列向量 → 列向量”的形式展示计算，同步适配公式、动画和交互，保留原有模型计算逻辑。
+
+相关链接：
+
+| 入口 | 链接 |
+| --- | --- |
+| 英文原版网址 | [LLM Visualization](https://bbycroft.net/llm) |
+| 英文原版仓库 | [bbycroft/llm-viz](https://github.com/bbycroft/llm-viz) |
+| 中文版网址 | [chudonghao.cn/llm/](https://chudonghao.cn/llm/) |
+| 中文版仓库 | [chudonghao/llm-viz](https://github.com/chudonghao/llm-viz) |
+| 中文版网址（GitHub Pages） | [chudonghao.github.io/llm-viz/](https://chudonghao.github.io/llm-viz/) |
+
+---
 
 # Brendan Bycroft's Home Page & Projects
 

@@ -94,7 +94,12 @@ export const en = {
     'intro.table.index': 'index',
     'intro.cells.processing': 'being processed',
     'intro.cells.weights': 'weights',
-    'intro.welcome': `Welcome to the walkthrough of the GPT large language model! Here we'll explore the model _nano-gpt_, with a mere 85,000 parameters.
+    'intro.sourceLink': 'View source for the Chinese edition',
+    'intro.welcome': `Welcome to the walkthrough of the GPT large language model!
+
+This site is based on Brendan Bycroft's {original}. It supports English and Simplified Chinese and displays the MLP using column vectors, while preserving the original model computations. {source}.
+
+Here we'll explore the model _nano-gpt_, with a mere 85,000 parameters.
 
 Its goal is a simple one: take a sequence of six letters: {input}and sort them in alphabetical order, i.e. to "ABBBCC".`,
 
@@ -614,7 +619,12 @@ export const zhCN: Record<MessageKey, string> = {
     'intro.table.index': '索引',
     'intro.cells.processing': '参与计算的数据',
     'intro.cells.weights': '权重',
-    'intro.welcome': `欢迎来到 GPT 大语言模型的交互教程！我们将探索 _nano-gpt_，一个只有约 8.5 万个参数的小模型。
+    'intro.sourceLink': '查看中文版源码',
+    'intro.welcome': `欢迎来到 GPT 大语言模型的交互教程！
+
+本站基于 Brendan Bycroft 的 {original}，提供中英双语支持，并将 MLP 调整为列向量布局，保留原有模型计算逻辑。{source}。
+
+我们将探索 _nano-gpt_，一个只有约 8.5 万个参数的小模型。
 
 它的任务很简单：接收六个字母组成的序列：{input}然后按字母顺序将它们排列成“ABBBCC”。`,
 

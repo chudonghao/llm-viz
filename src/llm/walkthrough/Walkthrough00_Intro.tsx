@@ -15,6 +15,7 @@ import { drawDataFlow } from "../components/DataFlow";
 import { translate } from '../i18n/messages';
 import { useI18n } from '../i18n/LanguageProvider';
 import { cameraForBlocks, cameraForModel, cameraForOutput } from "../Camera";
+import { embedLink } from "./Walkthrough01_Prelim";
 
 /*
 We're mostly on the right track here I think.
@@ -62,7 +63,11 @@ export function walkthroughIntro(args: IWalkthroughArgs) {
     const initialCamera = cameraForModel(layout, state.render.size, new Vec3(296, 16));
     setInitialCamera(state, initialCamera.center, initialCamera.angle);
 
-    let c0 = localizedCommentary(wt, 'intro.welcome', { input: embed(ExampleInputOutput) }, null, 0);
+    let c0 = localizedCommentary(wt, 'intro.welcome', {
+        original: embedLink('LLM Visualization', 'https://bbycroft.net/llm'),
+        source: embedLink(translate(wt.locale, 'intro.sourceLink'), 'https://github.com/chudonghao/llm-viz'),
+        input: embed(ExampleInputOutput),
+    }, null, 0);
 
     if (c0.t > 0) {
         for (let cube of layout.cubes) {

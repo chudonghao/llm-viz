@@ -1,6 +1,6 @@
 export type Locale = 'en' | 'zh-CN';
 
-export const defaultLocale: Locale = 'en';
+export const defaultLocale: Locale = 'zh-CN';
 export const localeStorageKey = 'llm-viz.locale';
 
 export function isLocale(value: unknown): value is Locale {
